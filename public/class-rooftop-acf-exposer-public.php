@@ -100,13 +100,34 @@ class Rooftop_Acf_Exposer_Public {
 
 	}
 
-    public function get_acf_fields($data, $post, $request) {
+    public function get_acf_fields($response, $post, $request) {
 
         global $wpdb;
 
-        $data->data['fields'] = array();
+        $custom_fields = get_fields($post->ID);
+        $response->data['fields'] = $custom_fields;
 
-        return $data;
+//        $field_group_ids = array_unique(array_values(array_map(function($acf_group){
+//            return $acf_group['field_group'];
+//        }, get_field_objects($post->ID))));
+//
+//        $acf_groups = array();
+//        foreach($field_group_ids as $field_group_id){
+//            $field = array();
+//            $acf_field_group = apply_filters('acf/field_group/get_fields', array(), $field_group_id);
+//            $field['key'] = $acf_field_group[0]['key'];
+//            $field['name'] = $acf_field_group[0]['name'];
+//            $field['label'] = $acf_field_group[0]['label'];
+//            $field['fields'] = array_map(function($field){
+//                $f = array();
+//                $f['class'] = $field['class'];
+//                return $f;
+//            }, $acf_field_group);
+//            $acf_groups[] = $field;
+//
+//        }
+
+        return $response;
     }
-	
+
 }
