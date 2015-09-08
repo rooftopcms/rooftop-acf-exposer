@@ -1,5 +1,5 @@
 {
-    "name": "error/rooftop-acf-exposer",
+    "name": "errorstudio/rooftop-acf-exposer",
     "description": "Include the ACF fields in a post response",
     "license": "MIT",
     "authors": [
