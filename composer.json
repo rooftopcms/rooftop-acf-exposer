@@ -1,11 +1,11 @@
 {
-    "name": "errorstudio/rooftop-acf-exposer",
+    "name": "rooftopcms/rooftop-acf-exposer",
     "description": "Include the ACF fields in a post response",
     "license": "MIT",
     "authors": [
         {
             "name": "Error",
-            "email": "info@errorstudio.co.uk"
+            "email": "hello@rooftopcms.com"
         }
     ],
     "repositories": [
