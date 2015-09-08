@@ -1,0 +1,20 @@
+{
+    "name": "error/rooftop-acf-exposer",
+    "description": "Include the ACF fields in a post response",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Error",
+            "email": "info@errorstudio.co.uk"
+        }
+    ],
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "http://wpackagist.org"
+        }
+    ],
+    "type": "wordpress-muplugin",
+    "require": {
+    }
+}
