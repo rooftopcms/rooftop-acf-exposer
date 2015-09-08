@@ -100,4 +100,13 @@ class Rooftop_Acf_Exposer_Public {
 
 	}
 
+
+    public function get_acf_fields($data, $post, $request) {
+
+        global $wpdb;
+
+        $data->data['fields'] = array();
+
+        return $data;
+    }
 }

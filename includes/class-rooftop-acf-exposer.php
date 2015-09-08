@@ -171,6 +171,7 @@ class Rooftop_Acf_Exposer {
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
+        $this->loader->add_filter('rest_prepare_post', $plugin_public, 'get_acf_fields', 10, 3);
 	}
 
 	/**
