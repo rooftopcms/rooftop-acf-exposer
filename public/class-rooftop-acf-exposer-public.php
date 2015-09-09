@@ -114,7 +114,7 @@ class Rooftop_Acf_Exposer_Public {
         $custom_fields = get_fields($post->ID);
 
         // iterate over the acf groups
-        $response->data['fields'] = array_map(function($group) use($custom_fields, $post) {
+        $response->data['field_groups'] = array_map(function($group) use($custom_fields, $post) {
             // the response group is the container for the individual fields
             $response_group = array('title' => $group['title']);
 
@@ -131,6 +131,7 @@ class Rooftop_Acf_Exposer_Public {
                     // some fields are multi-choice, like select boxes and radiobuttons - return them too
                     if(array_key_exists('choices', $acf_field)){
                         $response_field['choices'] = $acf_field['choices'];
+                        $response_field['class']   = $acf_field['class'];
                     }
 
                     // for fields that are 'relationships' we should return the relationship type along with the value
