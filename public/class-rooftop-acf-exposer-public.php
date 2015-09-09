@@ -100,32 +100,48 @@ class Rooftop_Acf_Exposer_Public {
 
 	}
 
+    /**
+     * @param $response
+     * @param $post
+     * @param $request
+     * @return mixed
+     *
+     * Rather than return a flat array of afc's, we want to return them in the groups specified by the site admin.
+     *
+     */
     public function get_acf_fields($response, $post, $request) {
 
         global $wpdb;
 
+        // our field values
         $custom_fields = get_fields($post->ID);
-        $response->data['fields'] = $custom_fields;
 
-//        $field_group_ids = array_unique(array_values(array_map(function($acf_group){
-//            return $acf_group['field_group'];
-//        }, get_field_objects($post->ID))));
-//
-//        $acf_groups = array();
-//        foreach($field_group_ids as $field_group_id){
-//            $field = array();
-//            $acf_field_group = apply_filters('acf/field_group/get_fields', array(), $field_group_id);
-//            $field['key'] = $acf_field_group[0]['key'];
-//            $field['name'] = $acf_field_group[0]['name'];
-//            $field['label'] = $acf_field_group[0]['label'];
-//            $field['fields'] = array_map(function($field){
-//                $f = array();
-//                $f['class'] = $field['class'];
-//                return $f;
-//            }, $acf_field_group);
-//            $acf_groups[] = $field;
-//
-//        }
+        // iterate over the acf groups
+        $response->data['fields'] = array_map(function($group) use($custom_fields, $post) {
+            // the response group is the container for the individual fields
+            $response_group = array('title' => $group['title']);
+
+            // get the fields that are available in this group
+            $acf_fields = apply_filters('acf/field_group/get_fields', array(), $group['id']);
+
+            // now we have a group and its fields - get the fields that correspond to this post (from the $custom_fields array)
+            $response_group['fields'] = array_map(function($field_group) use($custom_fields){
+                $acf_field = apply_filters('acf/load_field', $field_group, $field_group['key']);
+
+                $response_field = array();
+                $response_field['name'] = $field_group['name'];
+                $response_field['value'] = $custom_fields[$field_group['name']];
+
+                // some fields are multi-choice, like select boxes and radiobuttons - return them too
+                if(array_key_exists('choices', $acf_field)){
+                    $response_field['choices'] = $acf_field['choices'];
+                }
+
+                return $response_field;
+            }, $acf_fields);
+
+            return $response_group;
+        }, apply_filters('acf/get_field_groups', array()));
 
         return $response;
     }
