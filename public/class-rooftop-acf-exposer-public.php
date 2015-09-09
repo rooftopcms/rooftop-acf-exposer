@@ -118,21 +118,13 @@ class Rooftop_Acf_Exposer_Public {
             // the response group is the container for the individual fields
             $response_group = array('title' => $group['title']);
 
-            // get the fields that are available in this group
-            $acf_fields = apply_filters('acf/field_group/get_fields', array(), $group['id']);
-
-            // some fields aren't indended for front-end rendering, like tabs and messages
-            $acf_fields = array_filter($acf_fields, function($f){
-                return !in_array($f['class'], array('tab', 'message'));
-            });
+            $acf_fields = $this->get_acf_fields_in_group($group);
 
             // now we have a group and its fields - get the fields that correspond to this post (from the $custom_fields array)
             $response_group['fields'] = array_map(function($field_group) use($custom_fields){
                 $acf_field = apply_filters('acf/load_field', $field_group, $field_group['key']);
 
-                $response_field = array();
-
-                $response_field['name']  = $field_group['name'];
+                $response_field = array('name' => $field_group['name'], 'value' => null);
 
                 if(array_key_exists($field_group['name'], $custom_fields)){
 
@@ -140,8 +132,6 @@ class Rooftop_Acf_Exposer_Public {
                     if(array_key_exists('choices', $acf_field)){
                         $response_field['choices'] = $acf_field['choices'];
                     }
-
-                    $response_value = null;
 
                     // for fields that are 'relationships' we should return the relationship type along with the value
                     $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $field_group['class']);
@@ -181,6 +171,25 @@ class Rooftop_Acf_Exposer_Public {
         }, apply_filters('acf/get_field_groups', array()));
 
         return $response;
+    }
+
+    /**
+     * @param $group
+     * @return array|mixed|void
+     *
+     * return the fields that a user has added to a specific ACF group
+     *
+     */
+    private function get_acf_fields_in_group($group){
+        // get the fields that are available in this group
+        $acf_fields = apply_filters('acf/field_group/get_fields', array(), $group['id']);
+
+        // some fields aren't intended for front-end rendering, like tabs and messages
+        $acf_fields = array_filter($acf_fields, function($f){
+            return !in_array($f['class'], array('tab', 'message'));
+        });
+
+        return $acf_fields;
     }
 
     /**
