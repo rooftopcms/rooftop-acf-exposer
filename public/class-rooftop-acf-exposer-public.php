@@ -121,6 +121,11 @@ class Rooftop_Acf_Exposer_Public {
             // get the fields that are available in this group
             $acf_fields = apply_filters('acf/field_group/get_fields', array(), $group['id']);
 
+            // some fields aren't indended for front-end rendering, like tabs and messages
+            $acf_fields = array_filter($acf_fields, function($f){
+                return !in_array($f['class'], array('tab', 'message'));
+            });
+
             // now we have a group and its fields - get the fields that correspond to this post (from the $custom_fields array)
             $response_group['fields'] = array_map(function($field_group) use($custom_fields){
                 $acf_field = apply_filters('acf/load_field', $field_group, $field_group['key']);
