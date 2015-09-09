@@ -110,9 +110,6 @@ class Rooftop_Acf_Exposer_Public {
      *
      */
     public function get_acf_fields($response, $post, $request) {
-
-        global $wpdb;
-
         // our field values
         $custom_fields = get_fields($post->ID);
 
@@ -129,12 +126,38 @@ class Rooftop_Acf_Exposer_Public {
                 $acf_field = apply_filters('acf/load_field', $field_group, $field_group['key']);
 
                 $response_field = array();
-                $response_field['name'] = $field_group['name'];
-                $response_field['value'] = $custom_fields[$field_group['name']];
+
+                $response_field['name']  = $field_group['name'];
+
+                if(array_key_exists($field_group['name'], $custom_fields)){
+                    $response_field['value'] = $custom_fields[$field_group['name']];
+                }else {
+                    $response_field['value'] = null;
+                }
 
                 // some fields are multi-choice, like select boxes and radiobuttons - return them too
                 if(array_key_exists('choices', $acf_field)){
                     $response_field['choices'] = $acf_field['choices'];
+                }
+
+                // for fields that are 'relationships' we should return the relationship type
+                $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $field_group['class']);
+                if($is_relationship_type) {
+                    if(array_key_exists('post_type', $field_group)){
+                        $relationship_type  = 'post';
+                        $relationship_class = is_array($field_group['post_type']) ? $field_group['post_type'][0] : $field_group['post_type'];
+                    }elseif(array_key_exists('taxonomy', $field_group)) {
+                        $relationship_type  = 'taxonomy';
+                        $relationship_class = $field_group['taxonomy'];
+                    }else {
+                        $relationship_type  = $field_group['type'];
+                        $relationship_class = $field_group['class'];
+                    }
+
+                    $response_field['relationship'] = array(
+                        'type' => $relationship_type,
+                        'class' => $relationship_class
+                    );
                 }
 
                 return $response_field;
