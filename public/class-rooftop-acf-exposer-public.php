@@ -130,35 +130,44 @@ class Rooftop_Acf_Exposer_Public {
                 $response_field['name']  = $field_group['name'];
 
                 if(array_key_exists($field_group['name'], $custom_fields)){
-                    $response_field['value'] = $custom_fields[$field_group['name']];
-                }else {
-                    $response_field['value'] = null;
-                }
 
-                // some fields are multi-choice, like select boxes and radiobuttons - return them too
-                if(array_key_exists('choices', $acf_field)){
-                    $response_field['choices'] = $acf_field['choices'];
-                }
-
-                // for fields that are 'relationships' we should return the relationship type
-                $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $field_group['class']);
-                if($is_relationship_type) {
-                    if(array_key_exists('post_type', $field_group)){
-                        $relationship_type  = 'post';
-                        $relationship_class = is_array($field_group['post_type']) ? $field_group['post_type'][0] : $field_group['post_type'];
-                    }elseif(array_key_exists('taxonomy', $field_group)) {
-                        $relationship_type  = 'taxonomy';
-                        $relationship_class = $field_group['taxonomy'];
-                    }else {
-                        $relationship_type  = $field_group['type'];
-                        $relationship_class = $field_group['class'];
+                    // some fields are multi-choice, like select boxes and radiobuttons - return them too
+                    if(array_key_exists('choices', $acf_field)){
+                        $response_field['choices'] = $acf_field['choices'];
                     }
 
-                    $response_field['relationship'] = array(
-                        'type' => $relationship_type,
-                        'class' => $relationship_class
-                    );
+                    $response_value = null;
+
+                    // for fields that are 'relationships' we should return the relationship type along with the value
+                    $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $field_group['class']);
+                    if($is_relationship_type) {
+                        if(array_key_exists('post_type', $field_group)){
+                            $relationship_type  = 'post';
+                            $relationship_class = is_array($field_group['post_type']) ? $field_group['post_type'][0] : $field_group['post_type'];
+                            $response_value = $this->prepare_post_object($custom_fields[$field_group['name']], $field_group);
+                        }elseif(array_key_exists('taxonomy', $field_group)) {
+                            $relationship_type  = 'taxonomy';
+                            $relationship_class = $field_group['taxonomy'];
+                            $response_value = $this->prepare_taxonomy_object($custom_fields[$field_group['name']], $field_group);
+                        }else {
+                            $relationship_type  = $field_group['type'];
+                            $relationship_class = $field_group['class'];
+                            $response_value = $custom_fields[$field_group['name']];
+                        }
+
+                        $response_field['relationship'] = array(
+                            'type' => $relationship_type,
+                            'class' => $relationship_class
+                        );
+                    }else {
+                        $response_value = $custom_fields[$field_group['name']];
+                    }
+                }else {
+                    // we still include the field in the response so we can test `if !somefield.nil?` rather than `if response.responds_to?(:somefield) && !somefield.nil?`
+                    $response_value = null;
                 }
+
+                $response_field['value'] = $response_value;
 
                 return $response_field;
             }, $acf_fields);
@@ -169,4 +178,63 @@ class Rooftop_Acf_Exposer_Public {
         return $response;
     }
 
+    /**
+     * @param $value
+     * @param $field
+     * @return array
+     *
+     * given a WP_Post or array of WP_Post objects, return a trimmed down version of the post as an array
+     * If the value isn't an object, the user has specified their ACF field should return the object ID's
+     *
+     */
+    private function prepare_post_object($value, $field) {
+        $post_response = function($p){
+            return array(
+                'ID' => $p->ID,
+                'title'=>$p->post_title,
+                'post_type'=>$p->post_type,
+                'slug' => $p->post_name,
+                'excerpt' => $p->post_excerpt,
+                'status' => $p->post_status
+            );
+        };
+
+        if(is_array($value) && is_object(array_values($value)[0])){
+            return array_map($post_response, $value);
+        }elseif(is_object($value)){
+            return $post_response($value);
+        }else {
+            return $value;
+        }
+    }
+
+    /**
+     * @param $value
+     * @param $field
+     * @return array
+     *
+     * given an array of taxonomy objects, return a trimmed down version of the object as an array
+     * If the value isn't an object, the user has specified their ACF field should return the object ID's
+     *
+     */
+    private function prepare_taxonomy_object($value, $field) {
+        $taxonomy_response = function($t){
+            return array(
+                'name'=>$t->name,
+                'taxonomy'=>$t->taxonomy,
+                'term_id'=>$t->term_id,
+                'term_taxonomy_id'=>$t->term_taxonomy_id,
+                'name'=>$t->name,
+                'description'=>$t->description,
+                'parent'=>$t->parent);
+        };
+
+        if(is_array($value) && is_object(array_values($value)[0])){
+            return array_map($taxonomy_response, $value);
+        }elseif(is_object($value)){
+            return $taxonomy_response($value);
+        }else {
+            return $value;
+        }
+    }
 }
