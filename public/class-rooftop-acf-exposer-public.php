@@ -114,7 +114,7 @@ class Rooftop_Acf_Exposer_Public {
         $custom_fields = get_fields($post->ID);
 
         // iterate over the acf groups
-        $response->data['field_groups'] = array_map(function($group) use($custom_fields, $post) {
+        $response->data['fieldsets'] = array_map(function($group) use($custom_fields, $post) {
             // the response group is the container for the individual fields
             $response_group = array('title' => $group['title']);
 
