@@ -22,83 +22,83 @@
  */
 class Rooftop_Acf_Exposer_Public {
 
-	/**
-	 * The ID of this plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $plugin_name    The ID of this plugin.
-	 */
-	private $plugin_name;
+    /**
+     * The ID of this plugin.
+     *
+     * @since    1.0.0
+     * @access   private
+     * @var      string    $plugin_name    The ID of this plugin.
+     */
+    private $plugin_name;
 
-	/**
-	 * The version of this plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $version    The current version of this plugin.
-	 */
-	private $version;
+    /**
+     * The version of this plugin.
+     *
+     * @since    1.0.0
+     * @access   private
+     * @var      string    $version    The current version of this plugin.
+     */
+    private $version;
 
-	/**
-	 * Initialize the class and set its properties.
-	 *
-	 * @since    1.0.0
-	 * @param      string    $plugin_name       The name of the plugin.
-	 * @param      string    $version    The version of this plugin.
-	 */
-	public function __construct( $plugin_name, $version ) {
+    /**
+     * Initialize the class and set its properties.
+     *
+     * @since    1.0.0
+     * @param      string    $plugin_name       The name of the plugin.
+     * @param      string    $version    The version of this plugin.
+     */
+    public function __construct( $plugin_name, $version ) {
 
-		$this->plugin_name = $plugin_name;
-		$this->version = $version;
+        $this->plugin_name = $plugin_name;
+        $this->version = $version;
 
-	}
+    }
 
-	/**
-	 * Register the stylesheets for the public-facing side of the site.
-	 *
-	 * @since    1.0.0
-	 */
-	public function enqueue_styles() {
+    /**
+     * Register the stylesheets for the public-facing side of the site.
+     *
+     * @since    1.0.0
+     */
+    public function enqueue_styles() {
 
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Rooftop_Acf_Exposer_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Rooftop_Acf_Exposer_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
+        /**
+         * This function is provided for demonstration purposes only.
+         *
+         * An instance of this class should be passed to the run() function
+         * defined in Rooftop_Acf_Exposer_Loader as all of the hooks are defined
+         * in that particular class.
+         *
+         * The Rooftop_Acf_Exposer_Loader will then create the relationship
+         * between the defined hooks and the functions defined in this
+         * class.
+         */
 
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/rooftop-acf-exposer-public.css', array(), $this->version, 'all' );
+        wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/rooftop-acf-exposer-public.css', array(), $this->version, 'all' );
 
-	}
+    }
 
-	/**
-	 * Register the stylesheets for the public-facing side of the site.
-	 *
-	 * @since    1.0.0
-	 */
-	public function enqueue_scripts() {
+    /**
+     * Register the stylesheets for the public-facing side of the site.
+     *
+     * @since    1.0.0
+     */
+    public function enqueue_scripts() {
 
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Rooftop_Acf_Exposer_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Rooftop_Acf_Exposer_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
+        /**
+         * This function is provided for demonstration purposes only.
+         *
+         * An instance of this class should be passed to the run() function
+         * defined in Rooftop_Acf_Exposer_Loader as all of the hooks are defined
+         * in that particular class.
+         *
+         * The Rooftop_Acf_Exposer_Loader will then create the relationship
+         * between the defined hooks and the functions defined in this
+         * class.
+         */
 
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/rooftop-acf-exposer-public.js', array( 'jquery' ), $this->version, false );
+        wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/rooftop-acf-exposer-public.js', array( 'jquery' ), $this->version, false );
 
-	}
+    }
 
     /**
      * @param $response
@@ -109,69 +109,122 @@ class Rooftop_Acf_Exposer_Public {
      * Rather than return a flat array of afc's, we want to return them in the groups specified by the site admin.
      *
      */
-    public function get_acf_fields($response, $post, $request) {
-        // our field values
-        $custom_fields = get_fields($post->ID);
+    public function add_acf_fields_to_content() {
+        register_api_field('post', 'fieldsets', array(
+            'get_callback' => array($this, 'add_acf_to_post'),
+            'update_callback' => null,
+            'schema' => null
+        ));
+        register_api_field('page', 'fieldsets', array(
+            'get_callback' => array($this, 'add_acf_to_post'),
+            'update_callback' => null,
+            'schema' => null
+        ));
+
+        $custom_types = get_post_types(array('public' => true, '__builtin' => false));
+        foreach($custom_types as $key => $type) {
+            register_api_field($type, 'fieldsets', array(
+                'get_callback' => array($this, 'add_acf_to_post'),
+                'update_callback' => null,
+                'schema' => null
+            ));
+        }
+    }
+
+    public function add_acf_to_post($object, $fieldname, $request) {
+        $acf_fields = get_fields($object['id']);
+        if(!$acf_fields){
+            return [];
+        }
+
+        $field_value = array_filter($acf_fields, function($f){
+            return $f !== false;
+        });
 
         // iterate over the acf groups
-        $response->data['fieldsets'] = array_map(function($group) use($custom_fields, $post) {
+        $acf_data = array_map(function($group) use($field_value, $object) {
             // the response group is the container for the individual fields
             $response_group = array('title' => $group['title']);
 
             $acf_fields = $this->get_acf_fields_in_group($group);
 
             // now we have a group and its fields - get the fields that correspond to this post (from the $custom_fields array)
-            $response_group['fields'] = array_map(function($field_group) use($custom_fields){
-                $acf_field = apply_filters('acf/load_field', $field_group, $field_group['key']);
+            $response_group['fields'] = array_map(function($acf_field) use($field_value){
+                $acf_field = apply_filters('acf/load_field', $acf_field, $acf_field['key']);
 
-                $response_field = array('name' => $field_group['name'], 'value' => null);
-
-                if(array_key_exists($field_group['name'], $custom_fields)){
-
-                    // some fields are multi-choice, like select boxes and radiobuttons - return them too
-                    if(array_key_exists('choices', $acf_field)){
-                        $response_field['choices'] = $acf_field['choices'];
-                        $response_field['class']   = $acf_field['class'];
-                    }
-
-                    // for fields that are 'relationships' we should return the relationship type along with the value
-                    $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $field_group['class']);
-                    if($is_relationship_type) {
-                        if(array_key_exists('post_type', $field_group)){
-                            $relationship_type  = 'post';
-                            $relationship_class = is_array($field_group['post_type']) ? $field_group['post_type'][0] : $field_group['post_type'];
-                            $response_value = $this->prepare_post_object($custom_fields[$field_group['name']], $field_group);
-                        }elseif(array_key_exists('taxonomy', $field_group)) {
-                            $relationship_type  = 'taxonomy';
-                            $relationship_class = $field_group['taxonomy'];
-                            $response_value = $this->prepare_taxonomy_object($custom_fields[$field_group['name']], $field_group);
-                        }else {
-                            $relationship_type  = $field_group['type'];
-                            $relationship_class = $field_group['class'];
-                            $response_value = $custom_fields[$field_group['name']];
-                        }
-
-                        $response_field['relationship'] = array(
-                            'type' => $relationship_type,
-                            'class' => $relationship_class
-                        );
-                    }else {
-                        $response_value = $custom_fields[$field_group['name']];
-                    }
+                if(array_key_exists($acf_field['name'], $field_value)) {
+                    $response_value = $this->process_field($acf_field, $field_value);
                 }else {
-                    // we still include the field in the response so we can test `if !somefield.nil?` rather than `if response.responds_to?(:somefield) && !somefield.nil?`
-                    $response_value = null;
+                    // we still include the field in the response so we can test `if !somefield.empty?` rather than `if response.responds_to?(:somefield) && !somefield.empty?`
+                    $response_value = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'value' => "");
                 }
 
-                $response_field['value'] = $response_value;
-
-                return $response_field;
+                return $response_value;
             }, $acf_fields);
 
             return $response_group;
         }, apply_filters('acf/get_field_groups', array()));
 
-        return $response;
+        return $acf_data;
+    }
+
+    function process_field($acf_field, $field_values) {
+        $response_field = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'value' => "");
+
+        // some fields are multi-choice, like select boxes and radiobuttons - return them too
+        if(array_key_exists('choices', $acf_field)){
+            $response_field['choices'] = $acf_field['choices'];
+            $response_field['class']   = $acf_field['class'];
+        }
+
+        // for fields that are 'relationships' we should return the relationship type along with the value
+        $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $acf_field['class']);
+        if($is_relationship_type) {
+            if(array_key_exists('post_type', $acf_field)){
+                $relationship_type  = 'post';
+                $relationship_class = is_array($acf_field['post_type']) ? $acf_field['post_type'][0] : $acf_field['post_type'];
+                $relationships      = $this->prepare_post_object($field_values[$acf_field['name']], $acf_field);
+            }elseif(array_key_exists('taxonomy', $acf_field)) {
+                $relationship_type  = 'taxonomy';
+                $relationship_class = $acf_field['taxonomy'];
+                $relationships      = $this->prepare_taxonomy_object($field_values[$acf_field['name']], $acf_field);
+            }else {
+                $relationship_type  = $acf_field['type'];
+                $relationship_class = $acf_field['class'];
+                $relationships      = $field_values[$acf_field['name']];
+            }
+
+            $response_field['relationship'] = array(
+                'type' => $relationship_type,
+                'class' => $relationship_class
+            );
+            $response_field['value'] = $relationships;
+
+            return $response_field;
+        }elseif('repeater' == $acf_field['class']){
+            unset($response_field['value']);
+            $response_field['fields'] = $this->process_repeater_field($acf_field, $field_values);
+            return $response_field;
+        }else {
+            $response_field['value'] = $field_values[$acf_field['name']];
+            return $response_field;
+        }
+    }
+
+    function process_repeater_field($acf_field, $field_values) {
+        return $field_values;
+//        $repeater_field = array();
+//
+//        if($acf_field['sub_fields']){
+//            foreach($acf_field['sub_fields'] as $index => $sub_field) {
+//                $sub_field_values = $field_values[$acf_field['name']][$index];
+//                $repeater_field[] = $this->process_field($sub_field, $sub_field_values);
+//            }
+//            return $repeater_field;
+//        }else {
+//            $repeater_field['value'] = $field_values[$acf_field['name']];
+//            return $repeater_field;
+//        }
     }
 
     /**
