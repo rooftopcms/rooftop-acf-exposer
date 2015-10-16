@@ -1,10 +1,10 @@
 {
     "name": "rooftopcms/rooftop-acf-exposer",
     "description": "Include the ACF fields in a post response",
-    "license": "MIT",
+    "license": "GPL-3.0",
     "authors": [
         {
-            "name": "Error",
+            "name": "Rooftop CMS",
             "email": "hello@rooftopcms.com"
         }
     ],
