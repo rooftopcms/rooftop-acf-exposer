@@ -1,6 +1,6 @@
 === Plugin Name ===
 Contributors: rooftopcms
-Tags: api, fields
+Tags: rooftop, api, admin, headless, acf
 Requires at least: 4.3
 Tested up to: 4.3
 Stable tag: 4.3
