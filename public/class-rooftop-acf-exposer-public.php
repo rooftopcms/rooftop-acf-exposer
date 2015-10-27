@@ -121,7 +121,7 @@ class Rooftop_Acf_Exposer_Public {
             'schema' => null
         ));
 
-        $custom_types = get_post_types(array('public' => true, '__builtin' => false));
+        $custom_types = get_post_types(array('public' => true, '_builtin' => false));
         foreach($custom_types as $key => $type) {
             register_api_field($type, 'fieldsets', array(
                 'get_callback' => array($this, 'add_acf_to_post'),
@@ -133,6 +133,7 @@ class Rooftop_Acf_Exposer_Public {
 
     public function add_acf_to_post($object, $fieldname, $request) {
         $acf_fields = get_fields($object['id']);
+
         if(!$acf_fields){
             return [];
         }
@@ -180,7 +181,7 @@ class Rooftop_Acf_Exposer_Public {
         // for fields that are 'relationships' we should return the relationship type along with the value
         $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $acf_field['class']);
         if($is_relationship_type) {
-            if(array_key_exists('post_type', $acf_field)){
+            if(array_key_exists('post_type', $acf_field)) {
                 $relationship_type  = 'post';
                 $relationship_class = is_array($acf_field['post_type']) ? $acf_field['post_type'][0] : $acf_field['post_type'];
                 $relationships      = $this->prepare_post_object($field_values[$acf_field['name']], $acf_field);
@@ -201,7 +202,7 @@ class Rooftop_Acf_Exposer_Public {
             $response_field['value'] = $relationships;
 
             return $response_field;
-        }elseif('repeater' == $acf_field['class']){
+        }elseif('repeater' == $acf_field['class']) {
             unset($response_field['value']);
             $response_field['fields'] = $this->process_repeater_field($acf_field, $field_values);
             return $response_field;
@@ -212,19 +213,19 @@ class Rooftop_Acf_Exposer_Public {
     }
 
     function process_repeater_field($acf_field, $field_values) {
-        return $field_values;
-//        $repeater_field = array();
-//
-//        if($acf_field['sub_fields']){
-//            foreach($acf_field['sub_fields'] as $index => $sub_field) {
-//                $sub_field_values = $field_values[$acf_field['name']][$index];
-//                $repeater_field[] = $this->process_field($sub_field, $sub_field_values);
-//            }
-//            return $repeater_field;
-//        }else {
-//            $repeater_field['value'] = $field_values[$acf_field['name']];
-//            return $repeater_field;
-//        }
+        $repeater_field = array();
+
+        if($acf_field['sub_fields']) {
+            foreach($acf_field['sub_fields'] as $index => $acf_sub_field) {
+                foreach($field_values[$acf_field['name']] as $index => $sub_field_value) {
+                    $repeater_field[$index][] = $this->process_field($acf_sub_field, $sub_field_value);
+                }
+            }
+            return $repeater_field;
+        }else {
+            $repeater_field['value'] = $field_values[$acf_field['name']];
+            return $repeater_field;
+        }
     }
 
     /**
