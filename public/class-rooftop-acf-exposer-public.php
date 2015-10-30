@@ -341,7 +341,6 @@ class Rooftop_Acf_Exposer_Public {
                 'taxonomy'=>$t->taxonomy,
                 'term_id'=>$t->term_id,
                 'term_taxonomy_id'=>$t->term_taxonomy_id,
-                'name'=>$t->name,
                 'description'=>$t->description,
                 'parent'=>$t->parent);
         };
