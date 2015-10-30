@@ -100,6 +100,15 @@ class Rooftop_Acf_Exposer_Public {
 
     }
 
+    function prepare_acf_hooks() {
+        // register hooks for specific post types
+        $types = get_post_types(array('public' => true));
+
+        foreach($types as $key => $type) {
+            add_action( "rest_prepare_$type", array( $this, 'add_acf_fields_to_content' ), 20, 3 );
+        }
+    }
+
     /**
      * @param $response
      * @param $post
@@ -109,33 +118,29 @@ class Rooftop_Acf_Exposer_Public {
      * Rather than return a flat array of afc's, we want to return them in the groups specified by the site admin.
      *
      */
-    public function add_acf_fields_to_content() {
-        register_api_field('post', 'fieldsets', array(
-            'get_callback' => array($this, 'add_acf_to_post'),
-            'update_callback' => null,
-            'schema' => null
-        ));
-        register_api_field('page', 'fieldsets', array(
-            'get_callback' => array($this, 'add_acf_to_post'),
-            'update_callback' => null,
-            'schema' => null
-        ));
-
-        $custom_types = get_post_types(array('public' => true, '_builtin' => false));
-        foreach($custom_types as $key => $type) {
-            register_api_field($type, 'fieldsets', array(
-                'get_callback' => array($this, 'add_acf_to_post'),
-                'update_callback' => null,
-                'schema' => null
-            ));
+    public function add_acf_fields_to_content($response, $post, $request) {
+        try {
+            $response->data['content']['advanced'] = $this->add_acf_to_post($post);
+        }catch(Exception $e) {
+            error_log("Failed to get ACF fields for post: " . $e->getMessage());
         }
+
+        return $response;
     }
 
-    public function add_acf_to_post($object, $fieldname, $request) {
-        $acf_fields = get_fields($object['id']);
+    /**
+     * @param $post
+     * @return array
+     *
+     * returns the ACF fields associated with a given post
+     * called by the 'add_acf_fields_to_content' callback
+     *
+     */
+    private function add_acf_to_post($post) {
+        $acf_fields = get_fields($post->ID);
 
         // field groups that have been associated with this post
-        $post_field_groups = array_filter(get_field_objects($object['id']), function($f) {
+        $post_field_groups = array_filter(get_field_objects($post->ID), function($f) {
             return $f['value'];
         });
 
@@ -148,7 +153,7 @@ class Rooftop_Acf_Exposer_Public {
         });
 
         // iterate over the acf groups
-        $acf_data = array_map(function($group) use($field_value, $object, $post_field_groups) {
+        $acf_data = array_map(function($group) use($field_value, $post, $post_field_groups) {
             // the response group is the container for the individual fields
             $response_group = array('title' => $group['title']);
 
@@ -182,7 +187,15 @@ class Rooftop_Acf_Exposer_Public {
         return array_filter($acf_data);
     }
 
-    function process_field($acf_field, $field_values) {
+    /**
+     * @param $acf_field
+     * @param $field_values
+     * @return array
+     *
+     * return the attributes for a given field, recursively collect the nested fields if it is a repeater
+     *
+     */
+    private function process_field($acf_field, $field_values) {
         $response_field = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'class' => $acf_field['class'], 'value' => "");
 
         // some fields are multi-choice, like select boxes and radiobuttons - return them too
@@ -225,13 +238,14 @@ class Rooftop_Acf_Exposer_Public {
         }
     }
 
-    function get_acf_field_value($acf_field, $field_value) {
-        if( "wysiwyg" === $acf_field['class']) {
-            return apply_filters( 'rooftop_sanitise_html', $field_value );
-        }
-        return $field_value;
-    }
-
+    /**
+     * @param $acf_field
+     * @param $field_values
+     * @return array
+     *
+     * recursively process the fields in a repeater
+     *
+     */
     function process_repeater_field($acf_field, $field_values) {
         $repeater_field = array();
 
@@ -246,6 +260,20 @@ class Rooftop_Acf_Exposer_Public {
             $repeater_field['value'] = $field_values[$acf_field['name']];
             return $repeater_field;
         }
+    }
+
+    /**
+     * @param $acf_field
+     * @param $field_value
+     * @return mixed|void
+     *
+     * return the value of the ACF field, call the rooftop_sanitiser if it's a html field
+     */
+    function get_acf_field_value($acf_field, $field_value) {
+        if( "wysiwyg" === $acf_field['class']) {
+            return apply_filters( 'rooftop_sanitise_html', $field_value );
+        }
+        return $field_value;
     }
 
     /**
