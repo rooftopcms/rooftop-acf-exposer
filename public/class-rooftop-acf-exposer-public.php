@@ -134,7 +134,12 @@ class Rooftop_Acf_Exposer_Public {
     public function add_acf_to_post($object, $fieldname, $request) {
         $acf_fields = get_fields($object['id']);
 
-        if(!$acf_fields){
+        // field groups that have been associated with this post
+        $post_field_groups = array_filter(get_field_objects($object['id']), function($f) {
+            return $f['value'];
+        });
+
+        if(!$acf_fields) {
             return [];
         }
 
@@ -143,14 +148,22 @@ class Rooftop_Acf_Exposer_Public {
         });
 
         // iterate over the acf groups
-        $acf_data = array_map(function($group) use($field_value, $object) {
+        $acf_data = array_map(function($group) use($field_value, $object, $post_field_groups) {
             // the response group is the container for the individual fields
             $response_group = array('title' => $group['title']);
 
             $acf_fields = $this->get_acf_fields_in_group($group);
 
+            $post_has_group = array_filter($post_field_groups, function($field_group) use($group) {
+                return $field_group['field_group'] == $group['id'];
+            });
+
+            if ( !$post_has_group ) {
+                return null;
+            }
+
             // now we have a group and its fields - get the fields that correspond to this post (from the $custom_fields array)
-            $response_group['fields'] = array_map(function($acf_field) use($field_value){
+            $response_group['fields'] = array_map(function($acf_field) use($field_value) {
                 $acf_field = apply_filters('acf/load_field', $acf_field, $acf_field['key']);
 
                 if(array_key_exists($acf_field['name'], $field_value)) {
@@ -166,11 +179,11 @@ class Rooftop_Acf_Exposer_Public {
             return $response_group;
         }, apply_filters('acf/get_field_groups', array()));
 
-        return $acf_data;
+        return array_filter($acf_data);
     }
 
     function process_field($acf_field, $field_values) {
-        $response_field = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'value' => "");
+        $response_field = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'class' => $acf_field['class'], 'value' => "");
 
         // some fields are multi-choice, like select boxes and radiobuttons - return them too
         if(array_key_exists('choices', $acf_field)){
