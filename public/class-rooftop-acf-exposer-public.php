@@ -207,9 +207,16 @@ class Rooftop_Acf_Exposer_Public {
             $response_field['fields'] = $this->process_repeater_field($acf_field, $field_values);
             return $response_field;
         }else {
-            $response_field['value'] = $field_values[$acf_field['name']];
+            $response_field['value'] = apply_filters( 'rooftop_acf_field_value', $acf_field, $field_values[$acf_field['name']] );
             return $response_field;
         }
+    }
+
+    function get_acf_field_value($acf_field, $field_value) {
+        if( "wysiwyg" === $acf_field['class']) {
+            return apply_filters( 'rooftop_sanitise_html', $field_value );
+        }
+        return $field_value;
     }
 
     function process_repeater_field($acf_field, $field_values) {
