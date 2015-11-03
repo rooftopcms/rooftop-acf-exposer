@@ -139,14 +139,14 @@ class Rooftop_Acf_Exposer_Public {
     private function add_acf_to_post($post) {
         $acf_fields = get_fields($post->ID);
 
+        if( !$acf_fields ) {
+            return [];
+        }
+
         // field groups that have been associated with this post
         $post_field_groups = array_filter(get_field_objects($post->ID), function($f) {
             return $f['value'];
         });
-
-        if(!$acf_fields) {
-            return [];
-        }
 
         $field_value = array_filter($acf_fields, function($f){
             return $f !== false;
