@@ -184,7 +184,8 @@ class Rooftop_Acf_Exposer_Public {
             return $response_group;
         }, apply_filters('acf/get_field_groups', array()));
 
-        return array_filter($acf_data);
+        $fieldsets = array_filter($acf_data);
+        return array_values($fieldsets);
     }
 
     /**
