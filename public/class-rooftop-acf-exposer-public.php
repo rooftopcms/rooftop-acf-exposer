@@ -312,7 +312,8 @@ class Rooftop_Acf_Exposer_Public {
                 'title'=>$p->post_title,
                 'post_type'=>$p->post_type,
                 'slug' => $p->post_name,
-                'excerpt' => $p->post_excerpt,
+                'excerpt' => apply_filters('rooftop_sanitise_html', $p->post_excerpt),
+                'content' => apply_filters('rooftop_sanitise_html', $p->post_content),
                 'status' => $p->post_status
             );
         };
