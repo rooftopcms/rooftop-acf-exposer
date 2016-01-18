@@ -314,6 +314,7 @@ class Rooftop_Acf_Exposer_Public {
                 'slug' => $p->post_name,
                 'excerpt' => apply_filters('rooftop_sanitise_html', $p->post_excerpt),
                 'content' => apply_filters('rooftop_sanitise_html', $p->post_content),
+                'advanced' => $this->add_acf_to_post($p),
                 'status' => $p->post_status
             );
         };
