@@ -76,9 +76,10 @@ class Rooftop_Acf_Exposer {
 
         if( is_admin() ) {
 		    $this->define_admin_hooks();
-        }else {
-            $this->define_public_hooks();
         }
+
+        // we have some public hooks defined that we will use in this, and other plugins
+        $this->define_public_hooks();
 
 	}
 
@@ -159,6 +160,8 @@ class Rooftop_Acf_Exposer {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
+        $this->loader->add_action( 'save_post', $plugin_admin, 'store_acf_data' );
+        $this->loader->add_filter( 'rooftop_acf_field_value', $plugin_admin, 'get_acf_field_value', 10, 2 );
 	}
 
 	/**
@@ -176,7 +179,6 @@ class Rooftop_Acf_Exposer {
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
         $this->loader->add_action( 'rest_api_init', $plugin_public, 'prepare_acf_hooks', 10 );
-        $this->loader->add_filter( 'rooftop_acf_field_value', $plugin_public, 'get_acf_field_value', 10, 2 );
 	}
 
 	/**

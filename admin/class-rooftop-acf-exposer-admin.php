@@ -100,4 +100,244 @@ class Rooftop_Acf_Exposer_Admin {
 
 	}
 
+    public function store_acf_data( $post_id ) {
+        global $post;
+
+        if( ! $post ) {
+            return;
+        }
+        $data = $this->add_acf_to_post( $post );
+
+        update_post_meta( $post_id, 'rooftop_acf_data', $data );
+    }
+
+    /**
+     * @param $post
+     * @return array
+     *
+     * returns the ACF fields associated with a given post
+     * called by the 'add_acf_fields_to_content' callback
+     *
+     */
+    private function add_acf_to_post($post) {
+        $acf_fields = get_fields($post->ID);
+
+        if( !$acf_fields ) {
+            return [];
+        }
+
+        // field groups that have been associated with this post
+        $post_field_groups = array_filter(get_field_objects($post->ID), function($f) {
+            return $f['value'];
+        });
+
+        $field_value = array_filter($acf_fields, function($f){
+            return $f !== false;
+        });
+
+        // iterate over the acf groups
+        $acf_data = array_map(function($group) use($field_value, $post, $post_field_groups) {
+            // the response group is the container for the individual fields
+            $response_group = array('title' => $group['title']);
+
+            $acf_fields = $this->get_acf_fields_in_group($group);
+
+            $post_has_group = array_filter($post_field_groups, function($field_group) use($group) {
+                return $field_group['field_group'] == $group['id'];
+            });
+
+            if ( !$post_has_group ) {
+                return null;
+            }
+
+            // now we have a group and its fields - get the fields that correspond to this post (from the $custom_fields array)
+            $response_group['fields'] = array_map(function($acf_field) use($field_value) {
+                $acf_field = apply_filters('acf/load_field', $acf_field, $acf_field['key']);
+
+                if(array_key_exists($acf_field['name'], $field_value)) {
+                    $response_value = $this->process_field($acf_field, $field_value);
+                }else {
+                    // we still include the field in the response so we can test `if !somefield.empty?` rather than `if response.responds_to?(:somefield) && !somefield.empty?`
+                    $response_value = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'value' => "");
+                }
+
+                return $response_value;
+            }, $acf_fields);
+
+            return $response_group;
+        }, apply_filters('acf/get_field_groups', array()));
+
+        $fieldsets = array_filter($acf_data);
+
+        return array_values($fieldsets);
+    }
+
+    /**
+     * @param $acf_field
+     * @param $field_values
+     * @return array
+     *
+     * return the attributes for a given field, recursively collect the nested fields if it is a repeater
+     *
+     */
+    private function process_field($acf_field, $field_values) {
+        $response_field = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'class' => $acf_field['class'], 'value' => "");
+
+        // some fields are multi-choice, like select boxes and radiobuttons - return them too
+        if(array_key_exists('choices', $acf_field)){
+            $response_field['choices'] = $acf_field['choices'];
+            $response_field['class']   = $acf_field['class'];
+        }
+
+        // for fields that are 'relationships' we should return the relationship type along with the value
+        $is_relationship_type = preg_match('/^(page_link|post_object|relationship|taxonomy|user)$/', $acf_field['class']);
+        if($is_relationship_type) {
+            if(array_key_exists('post_type', $acf_field)) {
+                $relationship_type  = 'post';
+                $relationship_class = is_array($acf_field['post_type']) ? $acf_field['post_type'][0] : $acf_field['post_type'];
+                $relationships      = $this->prepare_post_object($field_values[$acf_field['name']], $acf_field);
+            }elseif(array_key_exists('taxonomy', $acf_field)) {
+                $relationship_type  = 'taxonomy';
+                $relationship_class = $acf_field['taxonomy'];
+                $relationships      = $this->prepare_taxonomy_object($field_values[$acf_field['name']], $acf_field);
+            }else {
+                $relationship_type  = $acf_field['type'];
+                $relationship_class = $acf_field['class'];
+                $relationships      = $field_values[$acf_field['name']];
+            }
+
+            $response_field['relationship'] = array(
+                'type' => $relationship_type,
+                'class' => $relationship_class
+            );
+            $response_field['value'] = $relationships;
+
+            return $response_field;
+        }elseif('repeater' == $acf_field['class']) {
+            unset($response_field['value']);
+            $response_field['fields'] = $this->process_repeater_field($acf_field, $field_values);
+            return $response_field;
+        }else {
+            $response_field['value'] = apply_filters( 'rooftop_acf_field_value', $acf_field, $field_values[$acf_field['name']] );
+            return $response_field;
+        }
+    }
+
+    /**
+     * @param $acf_field
+     * @param $field_values
+     * @return array
+     *
+     * recursively process the fields in a repeater
+     *
+     */
+    function process_repeater_field($acf_field, $field_values) {
+        $repeater_field = array();
+
+        if($acf_field['sub_fields']) {
+            foreach($acf_field['sub_fields'] as $index => $acf_sub_field) {
+                foreach($field_values[$acf_field['name']] as $index => $sub_field_value) {
+                    $repeater_field[$index][] = $this->process_field($acf_sub_field, $sub_field_value);
+                }
+            }
+            return $repeater_field;
+        }else {
+            $repeater_field['value'] = $field_values[$acf_field['name']];
+            return $repeater_field;
+        }
+    }
+
+    /**
+     * @param $group
+     * @return array|mixed|void
+     *
+     * return the fields that a user has added to a specific ACF group
+     *
+     */
+    private function get_acf_fields_in_group($group){
+        // get the fields that are available in this group
+        $acf_fields = apply_filters('acf/field_group/get_fields', array(), $group['id']);
+
+        // some fields aren't intended for front-end rendering, like tabs and messages
+        $acf_fields = array_filter($acf_fields, function($f){
+            return !in_array($f['class'], array('tab', 'message'));
+        });
+
+        return $acf_fields;
+    }
+
+    /**
+     * @param $value
+     * @param $field
+     * @return array
+     *
+     * given a WP_Post or array of WP_Post objects, return a trimmed down version of the post as an array
+     * If the value isn't an object, the user has specified their ACF field should return the object ID's
+     *
+     */
+    private function prepare_post_object($value, $field) {
+        $post_response = function($p){
+            return array(
+                'ID' => $p->ID,
+                'title'=>$p->post_title,
+                'post_type'=>$p->post_type,
+                'slug' => $p->post_name,
+                'excerpt' => apply_filters('rooftop_sanitise_html', $p->post_excerpt),
+                'content' => apply_filters('rooftop_sanitise_html', $p->post_content),
+                'advanced' => $this->add_acf_to_post($p),
+                'status' => $p->post_status
+            );
+        };
+
+        if(is_array($value) && is_object(array_values($value)[0])){
+            return array_map($post_response, $value);
+        }elseif(is_object($value)){
+            return $post_response($value);
+        }else {
+            return $value;
+        }
+    }
+
+    /**
+     * @param $value
+     * @param $field
+     * @return array
+     *
+     * given an array of taxonomy objects, return a trimmed down version of the object as an array
+     * If the value isn't an object, the user has specified their ACF field should return the object ID's
+     *
+     */
+    private function prepare_taxonomy_object($value, $field) {
+        $taxonomy_response = function($t){
+            return array(
+                'name'=>$t->name,
+                'taxonomy'=>$t->taxonomy,
+                'term_id'=>$t->term_id,
+                'term_taxonomy_id'=>$t->term_taxonomy_id,
+                'description'=>$t->description,
+                'parent'=>$t->parent);
+        };
+
+        if(is_array($value) && is_object(array_values($value)[0])){
+            return array_map($taxonomy_response, $value);
+        }elseif(is_object($value)){
+            return $taxonomy_response($value);
+        }else {
+            return $value;
+        }
+    }
+
+    /**
+     * @param $acf_field
+     * @param $field_value
+     * @return mixed|void
+     *
+     * return the value of the ACF field, call the rooftop_sanitiser if it's a html field
+     */
+    function get_acf_field_value($acf_field, $field_value) {
+        if( "wysiwyg" === $acf_field['class']) {
+            return apply_filters( 'rooftop_sanitise_html', $field_value );
+        }
+        return $field_value;
+    }
 }
