@@ -101,7 +101,7 @@ class Rooftop_Acf_Exposer_Admin {
 	}
 
     public function store_acf_data( $post_id ) {
-        global $post;
+        $post = get_post( $post_id );
 
         if( ! $post ) {
             return;
