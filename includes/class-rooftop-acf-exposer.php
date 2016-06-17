@@ -76,10 +76,9 @@ class Rooftop_Acf_Exposer {
 
         if( is_admin() ) {
 		    $this->define_admin_hooks();
+        }else {
+            $this->define_public_hooks();
         }
-
-        // we have some public hooks defined that we will use in this, and other plugins
-        $this->define_public_hooks();
 
 	}
 
