@@ -100,4 +100,30 @@ class Rooftop_Acf_Exposer_Admin {
 
 	}
 
+    public function store_acf_data( $post_id ) {
+        $post = get_post( $post_id );
+
+        // if we dont have a post, or it's being auto saved or trashed, skip storing anything at this point
+        if( ! $post || @$_POST['data']['wp_autosave'] || in_array( $post->post_status, array( 'auto-draft', 'trash' ) ) ) {
+            return;
+        }
+
+        /*
+         * if we're updating via the api, we only need to call this if we don't already have ACF data
+         * to return in the response. this is because we aren't updating the ACF data via POST/PUT requests yet.
+         *
+         * TODO: remove this when we implement updating ACF through the API
+         */
+        $json_request = preg_match('/\/wp-json/', $_SERVER['REQUEST_URI']);
+        $has_acf_data = ! empty( get_post_meta( $post->ID, 'rooftop_acf_data', true ) );
+
+        if( $json_request && $has_acf_data ) {
+            return;
+        }
+
+        $data = apply_filters( 'rooftop_acf_data', $post, array() );
+
+        update_post_meta( $post_id, 'rooftop_acf_data', $data );
+    }
+
 }

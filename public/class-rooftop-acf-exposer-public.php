@@ -123,13 +123,36 @@ class Rooftop_Acf_Exposer_Public {
      */
     public function add_acf_fields_to_content($response, $post, $request) {
         try {
-            $depth = 0;
-            $response->data['content']['advanced'] = $this->add_acf_to_post($post, $depth);
+            $data = get_post_meta( $post->ID, 'rooftop_acf_data', true );
+
+            if( empty( $data ) ) {
+                $data = apply_filters( 'rooftop_acf_data', $post, array() );
+
+                if( !empty( $data ) ) {
+                    update_post_meta( $post->ID, 'rooftop_acf_data', $data );
+                }
+            }
+
+            $response->data['content']['advanced'] = empty( $data ) ? [] : $data;
         }catch(Exception $e) {
             error_log("Failed to get ACF fields for post: " . $e->getMessage());
         }
 
         return $response;
+    }
+
+
+    /**
+     * @param $post
+     * @return array
+     *
+     * returns the ACF fields associated with a given post
+     * called by the 'add_acf_fields_to_content' callback
+     *
+     */
+    public function get_acf_data( $post, $depth = 0 ) {
+        $data = $this->acf_fields_for_post_at_depth( $post, $depth );
+        return $data;
     }
 
     /**
@@ -140,7 +163,8 @@ class Rooftop_Acf_Exposer_Public {
      * called by the 'add_acf_fields_to_content' callback
      *
      */
-    private function add_acf_to_post($post, $depth) {
+
+    private function acf_fields_for_post_at_depth($post, $depth) {
         $acf_fields = get_fields($post->ID);
 
         if( !$acf_fields ) {
@@ -329,7 +353,7 @@ class Rooftop_Acf_Exposer_Public {
              * If MAX_DEPTH is set to 3, all three levels, A -> B -> C, should have ACF data.
              */
             if( $field['type'] == 'relationship' && $depth <= Rooftop_Acf_Exposer_Public::$MAX_DEPTH ) {
-                $new_field['advanced'] = $this->add_acf_to_post($p, $depth);
+                $new_field['advanced'] = $this->get_acf_data($p, $depth);
             }
 
             return $new_field;
