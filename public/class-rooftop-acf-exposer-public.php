@@ -22,6 +22,8 @@
  */
 class Rooftop_Acf_Exposer_Public {
 
+    private static $MAX_DEPTH = 3;
+
     /**
      * The ID of this plugin.
      *
@@ -39,6 +41,7 @@ class Rooftop_Acf_Exposer_Public {
      * @var      string    $version    The current version of this plugin.
      */
     private $version;
+
 
     /**
      * Initialize the class and set its properties.
@@ -130,7 +133,8 @@ class Rooftop_Acf_Exposer_Public {
                 }
             }
 
-            $response->data['content']['advanced'] = empty( $data ) ? [] : $data;
+            $depth = 0;
+            $response->data['content']['advanced'] = $this->add_acf_to_post($post, $depth);
         }catch(Exception $e) {
             error_log("Failed to get ACF fields for post: " . $e->getMessage());
         }
@@ -146,7 +150,7 @@ class Rooftop_Acf_Exposer_Public {
      * called by the 'add_acf_fields_to_content' callback
      *
      */
-    public function get_acf_data( $post ) {
+    private function add_acf_to_post($post, $depth) {
         $acf_fields = get_fields($post->ID);
 
         if( !$acf_fields ) {
@@ -163,7 +167,7 @@ class Rooftop_Acf_Exposer_Public {
         });
 
         // iterate over the acf groups
-        $acf_data = array_map(function($group) use($field_value, $post, $post_field_groups) {
+        $acf_data = array_map(function($group) use($field_value, $post, $post_field_groups, $depth) {
             // the response group is the container for the individual fields
             $response_group = array('title' => $group['title']);
 
@@ -178,11 +182,11 @@ class Rooftop_Acf_Exposer_Public {
             }
 
             // now we have a group and its fields - get the fields that correspond to this post (from the $custom_fields array)
-            $response_group['fields'] = array_map(function($acf_field) use($field_value) {
+            $response_group['fields'] = array_map(function($acf_field) use($field_value, $depth) {
                 $acf_field = apply_filters('acf/load_field', $acf_field, $acf_field['key']);
 
                 if(array_key_exists($acf_field['name'], $field_value)) {
-                    $response_value = $this->process_field($acf_field, $field_value);
+                    $response_value = $this->process_field($acf_field, $field_value, $depth);
                 }else {
                     // we still include the field in the response so we can test `if !somefield.empty?` rather than `if response.responds_to?(:somefield) && !somefield.empty?`
                     $response_value = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'value' => "");
@@ -207,7 +211,7 @@ class Rooftop_Acf_Exposer_Public {
      * return the attributes for a given field, recursively collect the nested fields if it is a repeater
      *
      */
-    private function process_field($acf_field, $field_values) {
+    private function process_field($acf_field, $field_values, $depth) {
         $response_field = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'class' => $acf_field['class'], 'value' => "");
 
         // some fields are multi-choice, like select boxes and radiobuttons - return them too
@@ -222,7 +226,7 @@ class Rooftop_Acf_Exposer_Public {
             if(array_key_exists('post_type', $acf_field)) {
                 $relationship_type  = 'post';
                 $relationship_class = is_array($acf_field['post_type']) ? $acf_field['post_type'][0] : $acf_field['post_type'];
-                $relationships      = $this->prepare_post_object($field_values[$acf_field['name']], $acf_field);
+                $relationships      = $this->prepare_post_object($field_values[$acf_field['name']], $acf_field, $depth+1);
             }elseif(array_key_exists('taxonomy', $acf_field)) {
                 $relationship_type  = 'taxonomy';
                 $relationship_class = $acf_field['taxonomy'];
@@ -242,7 +246,7 @@ class Rooftop_Acf_Exposer_Public {
             return $response_field;
         }elseif('repeater' == $acf_field['class']) {
             unset($response_field['value']);
-            $response_field['fields'] = $this->process_repeater_field($acf_field, $field_values);
+            $response_field['fields'] = $this->process_repeater_field($acf_field, $field_values, $depth);
             return $response_field;
         }else {
             $response_field['value'] = apply_filters( 'rooftop_acf_field_value', $acf_field, $field_values[$acf_field['name']] );
@@ -258,13 +262,13 @@ class Rooftop_Acf_Exposer_Public {
      * recursively process the fields in a repeater
      *
      */
-    function process_repeater_field($acf_field, $field_values) {
+    function process_repeater_field($acf_field, $field_values, $depth) {
         $repeater_field = array();
 
         if($acf_field['sub_fields']) {
             foreach($acf_field['sub_fields'] as $index => $acf_sub_field) {
                 foreach($field_values[$acf_field['name']] as $index => $sub_field_value) {
-                    $repeater_field[$index][] = $this->process_field($acf_sub_field, $sub_field_value);
+                    $repeater_field[$index][] = $this->process_field($acf_sub_field, $sub_field_value, $depth);
                 }
             }
             return $repeater_field;
@@ -302,18 +306,30 @@ class Rooftop_Acf_Exposer_Public {
      * If the value isn't an object, the user has specified their ACF field should return the object ID's
      *
      */
-    private function prepare_post_object($value, $field) {
-        $post_response = function($p){
-            return array(
+    private function prepare_post_object($value, $field, $depth) {
+        $post_response = function($p) use($depth, $field) {
+            $new_field = array(
                 'ID' => $p->ID,
                 'title'=>$p->post_title,
                 'post_type'=>$p->post_type,
                 'slug' => $p->post_name,
                 'excerpt' => apply_filters('rooftop_sanitise_html', $p->post_excerpt),
                 'content' => apply_filters('rooftop_sanitise_html', $p->post_content),
-                'advanced' => $this->get_acf_data($p),
                 'status' => $p->post_status
             );
+
+            /*
+             * if the user has added an ACF relationship, we should also add the ACF data to the related post,
+             * but only down to a certain depth. If POST-A has a relationship with POST-B, which in turn has a
+             * relationship with POST-A and POST-C, the ACF structure should refer from A to B, and B to A as
+             * well as B to C.
+             * If MAX_DEPTH is set to 3, all three levels, A -> B -> C, should have ACF data.
+             */
+            if( $field['type'] == 'relationship' && $depth <= Rooftop_Acf_Exposer_Public::$MAX_DEPTH ) {
+                $new_field['advanced'] = $this->add_acf_to_post($p, $depth);
+            }
+
+            return $new_field;
         };
 
         if(is_array($value) && is_object(array_values($value)[0])){
