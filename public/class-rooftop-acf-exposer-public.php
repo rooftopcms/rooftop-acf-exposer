@@ -333,13 +333,14 @@ class Rooftop_Acf_Exposer_Public {
             );
 
             /*
-             * if the user has added an ACF relationship, we should also add the ACF data to the related post,
-             * but only down to a certain depth. If POST-A has a relationship with POST-B, which in turn has a
-             * relationship with POST-A and POST-C, the ACF structure should refer from A to B, and B to A as
-             * well as B to C.
+             * Ordinarily, depth will be 1 here - however, if the user has added an ACF relationship, we should
+             * also add the ACF data to the related post, but only down to a certain depth.
+             *
+             * If POST-A has a relationship with POST-B, which in turn has a relationship with POST-A and POST-C,
+             * the ACF structure should refer to data from A to B, and B to A as well as B to C.
              * If MAX_DEPTH is set to 3, all three levels, A -> B -> C, should have ACF data.
              */
-            if( $field['type'] == 'relationship' && $depth <= Rooftop_Acf_Exposer_Public::$MAX_DEPTH ) {
+            if( $depth <= Rooftop_Acf_Exposer_Public::$MAX_DEPTH ) {
                 $new_field['advanced'] = $this->get_acf_data($p, $depth);
             }
 
