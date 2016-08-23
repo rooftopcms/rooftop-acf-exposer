@@ -123,7 +123,7 @@ class Rooftop_Acf_Exposer_Admin {
 
         $data = apply_filters( 'rooftop_acf_data', $post, array() );
 
-        update_post_meta( $post_id, 'rooftop_acf_data', $data );
+        update_metadata('post', $post_id, 'rooftop_acf_data', $data, '');
     }
 
 }
