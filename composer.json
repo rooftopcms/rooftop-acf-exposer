@@ -16,6 +16,6 @@
     ],
     "type": "wordpress-muplugin",
     "require": {
-        "wpackagist-plugin/advanced-custom-fields": "4.4.3"
+        "wpackagist-plugin/advanced-custom-fields": "4.4.8"
     }
 }
