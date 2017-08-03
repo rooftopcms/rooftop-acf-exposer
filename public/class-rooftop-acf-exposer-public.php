@@ -110,6 +110,25 @@ class Rooftop_Acf_Exposer_Public {
         foreach($types as $key => $type) {
             add_action( "rest_prepare_$type", array( $this, 'add_acf_fields_to_content' ), 20, 3 );
         }
+
+        $terms = get_terms( );
+        foreach( $terms as $term ) {
+            register_rest_field($term->taxonomy,
+                'advanced',
+                array(
+                    'get_callback' => array($this, 'add_fields_to_taxonomy'),
+                    'update_callback' => null,
+                    'schema' => null
+                )
+            );
+        }
+    }
+
+    public function add_fields_to_taxonomy( $response, $field, $request ) {
+        $term_id = $response['taxonomy'] . "_" . $response['id'];
+        $term_fields = get_fields( $term_id );
+
+        return array('fields' => $term_fields);
     }
 
     /**
