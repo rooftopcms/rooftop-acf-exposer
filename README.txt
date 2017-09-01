@@ -1,9 +1,9 @@
-=== Plugin Name ===
+=== Rooftop ACF Exposer ===
 Contributors: rooftopcms
 Tags: rooftop, api, admin, headless, acf
-Requires at least: 4.3
+Requires at least: 4.7
 Tested up to: 4.8.1
-Stable tag: 4.3
+Stable tag: 4.8
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -37,8 +37,16 @@ The licence for ACF is not open source, but there is a freely-downloadable versi
 
 == Changelog ==
 
+= 1.2.1 =
+* Preliminary support for ACF fields in taxonomy term responses
+* Updated readme for packaging
+
+= 1.2.0 =
+* Fixes & Updated ACF version
+
 = 0.0.1 =
 * Initial release
+
 
 == What's Rooftop CMS? ==
 
