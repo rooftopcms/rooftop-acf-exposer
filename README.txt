@@ -2,7 +2,7 @@
 Contributors: rooftopcms
 Tags: rooftop, api, admin, headless, acf
 Requires at least: 4.3
-Tested up to: 4.3
+Tested up to: 4.8.1
 Stable tag: 4.3
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
