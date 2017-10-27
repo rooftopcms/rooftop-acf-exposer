@@ -438,17 +438,18 @@ class Rooftop_Acf_Exposer_Public {
         }
     }
 
-    function sub_fields( $fields, $key, $depth = 0 ) {
+    function sub_fields( $fields, $key ) {
         $nested_fields = [];
-        $keys = [];
 
         foreach( $fields as $field_index => $field ) {
             foreach( $field as $index => $sub_field ) {
                 if( array_key_exists('fields', $sub_field ) ) {
-                    $nested_fields[$key][] = $this->sub_fields( $sub_field['fields'], $sub_field['key'], $depth+=1 );
+                    $nested = $this->sub_fields( $sub_field['fields'], $sub_field['key'] );
+                    $nested_sub_field = array_merge( $nested_fields[$key][$field_index], $nested );
+
+                    $nested_fields[$key][$field_index] = $nested_sub_field;
                 }else {
                     $nested_fields[$key][$field_index][$sub_field['key']] = $sub_field['value'];
-                    $keys[$key][$sub_field['key']] = "";
                 }
             }
         }
