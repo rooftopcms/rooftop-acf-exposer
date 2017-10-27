@@ -202,7 +202,7 @@ class Rooftop_Acf_Exposer_Public {
         // iterate over the acf groups
         $acf_data = array_map(function($group) use($field_value, $post, $post_field_groups, $depth) {
             // the response group is the container for the individual fields
-            $response_group = array('title' => $group['title']);
+            $response_group = array('title' => $group['title'], 'id' => @$group['id']);
 
             $acf_fields = $this->get_acf_fields_in_group($group);
 
@@ -245,7 +245,7 @@ class Rooftop_Acf_Exposer_Public {
      *
      */
     private function process_field($acf_field, $field_values, $depth) {
-        $response_field = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'class' => $acf_field['class'], 'value' => "");
+        $response_field = array('key' => $acf_field['key'], 'name' => $acf_field['name'], 'label' => $acf_field['label'], 'class' => $acf_field['class'], 'value' => "");
 
         // some fields are multi-choice, like select boxes and radiobuttons - return them too
         if(array_key_exists('choices', $acf_field)){
@@ -418,4 +418,98 @@ class Rooftop_Acf_Exposer_Public {
         return $field_value;
     }
 
+    function store_acf_fields( $post_id ) {
+        $post = get_post( $post_id );
+
+        $dont_write_acf = array_key_exists('ACF_WRITE', $_SERVER) && @$_SERVER['ACF_WRITE']==false;
+
+        // if we dont have a post, or it's being auto saved or trashed, skip storing anything at this point
+        if( ! $post || @$_POST['data']['wp_autosave'] || in_array( $post->post_status, array( 'auto-draft', 'trash' ) ) || $dont_write_acf ) {
+            return;
+        }
+
+        $posted_fields = @$_POST['advanced'][0]['fields'] ? @$_POST['advanced'][0]['fields'] : [];
+        $fields = $this->flattened_acf_fields( $posted_fields );
+
+        foreach( $fields as $index => $field ) {
+            foreach( $field as $key => $value ) {
+                update_field( $key, $value, $post_id );
+            }
+        }
+    }
+
+    function sub_fields( $fields, $key ) {
+        $nested_fields = [];
+
+        foreach( $fields as $field_index => $field ) {
+            foreach( $field as $index => $sub_field ) {
+                if( array_key_exists('fields', $sub_field ) ) {
+                    $nested = $this->sub_fields( $sub_field['fields'], $sub_field['key'] );
+                    $nested_sub_field = array_merge( $nested_fields[$key][$field_index], $nested );
+
+                    $nested_fields[$key][$field_index] = $nested_sub_field;
+                }else {
+                    $nested_fields[$key][$field_index][$sub_field['key']] = $sub_field['value'];
+                }
+            }
+        }
+
+        return $nested_fields;
+    }
+
+    function flattened_acf_fields( $fields ) {
+        $flattened_fields = [];
+
+        foreach( $fields as $key => $value ) {
+            if( $this->is_a_repeater_with_nested_repeaters( $value ) ) {
+                $flattened_fields[] = $this->sub_fields( $value['fields'], $value['key'] );
+            }elseif( $this->is_a_repeater_with_values( $value ) ) {
+                $flattened_fields[] = $this->sub_fields( $value['fields'], $value['key'] );
+            }else {
+                $flattened_fields[] = array($value['key'] => $value['value']); // single non-repeating field values. todo: check for a field_* key name and build an acfcloneindex object as the value
+            }
+        }
+
+        return $flattened_fields;
+    }
+
+    function is_a_repeater_with_nested_repeaters( $value ) {
+        $nested_value = @$value['fields'];
+
+        $is_array = is_array( $nested_value );
+        if( !$is_array ) return false;
+
+        $fields_with_sub_fields = array_filter( $nested_value, function( $sub_field ) {
+            $matching = [];
+            foreach( $sub_field as $_field ) {
+                if( array_key_exists( 'fields', $_field ) ) {
+                    $matching[] = $_field;
+                }
+            }
+
+            return $matching;
+        } );
+
+        return count( $fields_with_sub_fields ) ? true : false;
+    }
+
+    function is_a_repeater_with_values( $value ) {
+        $types = array_unique( array_map( function( $i) {return gettype( $i ); }, array_values( $value ) ) );
+        $has_arrays = count( preg_grep( '/array/', $types ) ) > 0;
+        $has_fields = array_key_exists( 'fields', $value );
+
+        $fields = @$value['fields'];
+
+        if( !$fields ) return false;
+
+        $all_rows_have_values = false;
+        foreach( $fields as $field ) {
+            $values = array_values( $field );
+            $field_values = array_map( function( $i ) {return @$i['value']; }, $values );
+
+            $all_rows_have_values = count( $field ) == count( array_filter( $field_values ) );
+        }
+
+        return $has_arrays && $has_fields && $all_rows_have_values;
+    }
 }
