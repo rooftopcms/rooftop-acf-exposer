@@ -111,19 +111,19 @@ class Rooftop_Acf_Exposer_Admin {
         /*
          * if we're updating via the api, we only need to call this if we don't already have ACF data
          * to return in the response. this is because we aren't updating the ACF data via POST/PUT requests yet.
-         *
-         * TODO: remove this when we implement updating ACF through the API
          */
         $json_request = preg_match('/\/wp-json/', $_SERVER['REQUEST_URI']);
-        $has_acf_data = ! empty( get_post_meta( $post->ID, 'rooftop_acf_data', true ) );
 
-        if( $json_request && $has_acf_data ) {
+        $acf_write_enabled = apply_filters( 'rooftop_acf_write_enabled', false );
+        if( $json_request && !$acf_write_enabled ) {
             return;
         }
 
         $data = apply_filters( 'rooftop_acf_data', $post, array() );
+        $structure = apply_filters( 'rooftop_acf_structure', $post->post_type, array() );
 
         update_metadata('post', $post_id, 'rooftop_acf_data', $data, '');
+        update_metadata( 'post', $post_id, 'rooftop_acf_structure', $structure, '');
     }
 
 }
