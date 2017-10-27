@@ -428,12 +428,16 @@ class Rooftop_Acf_Exposer_Public {
             return;
         }
 
-        $posted_fields = @$_POST['advanced'][0]['fields'] ? @$_POST['advanced'][0]['fields'] : [];
-        $fields = $this->flattened_acf_fields( $posted_fields );
+        if( is_array( @$_POST['advanced'] ) ) {
+            foreach( $_POST['advanced'] as $fieldset ) {
+                $posted_fields = $fieldset['fields'];
+                $flattened_fields = $this->flattened_acf_fields( $posted_fields );
 
-        foreach( $fields as $index => $field ) {
-            foreach( $field as $key => $value ) {
-                update_field( $key, $value, $post_id );
+                foreach( $flattened_fields as $index => $field ) {
+                    foreach( $field as $key => $value ) {
+                        update_field( $key, $value, $post_id );
+                    }
+                }
             }
         }
     }
