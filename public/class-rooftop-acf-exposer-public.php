@@ -153,6 +153,16 @@ class Rooftop_Acf_Exposer_Public {
             }
 
             $response->data['content']['advanced'] = empty( $data ) ? [] : $data;
+
+            $structure = get_post_meta( $post->ID, 'rooftop_acf_structure', true );
+            if( empty( $structure ) ) {
+                $structure = apply_filters( 'rooftop_acf_structure', $post->post_type, array() );
+
+                if( !empty( $structure ) ) {
+                    update_metadata( 'post', $post->ID, 'rooftop_acf_structure', $data, '');
+                }
+            }
+            $response->data['content']['advanced_fields'] = empty( $structure ) ? [] : $structure;
         }catch(Exception $e) {
             error_log("Failed to get ACF fields for post: " . $e->getMessage());
         }
@@ -172,6 +182,54 @@ class Rooftop_Acf_Exposer_Public {
     public function get_acf_data( $post, $depth = 0 ) {
         $data = $this->acf_fields_for_post_at_depth( $post, $depth );
         return $data;
+    }
+
+    private function acf_field_structure( $fields ) {
+        $structure = [];
+
+        foreach( $fields as $field ) {
+            if( array_key_exists( 'sub_fields', $field ) ) {
+                $structure[] = array('key' => $field['key'], 'fields' => $this->acf_field_structure( $field['sub_fields'] ) );
+            }else {
+                $structure[] = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type']);
+            }
+        }
+
+        return $structure;
+    }
+
+    public function get_acf_structure( $post_type ) {
+        $acfs = array_filter( apply_filters('acf/get_field_groups', array() ) );
+
+        $acf_structure = [];
+
+        // build up an array of ACF metabox_ids and only include our fieldset if
+        // the current post is a valid type for the given post_type
+        $filter = array(
+            'post_type'	=> $post_type
+        );
+        $metabox_ids = array();
+        $metabox_ids = apply_filters( 'acf/location/match_field_groups', $metabox_ids, $filter );
+
+        if( is_array($acfs) ) {
+            $fieldsets = array_map( function( $a ) use ( $metabox_ids ) {
+                $fields = apply_filters('acf/field_group/get_fields', array(), $a['id'] );
+                $structured_fields = $this->acf_field_structure( $fields );
+
+                if( in_array( $a['id'], $metabox_ids ) ) {
+                    return array('id' => $a['id'], 'title' => $a['title'], 'fields' => $structured_fields );
+                }
+            }, $acfs );
+
+            $acf_structure[] = array_filter( $fieldsets );
+        }
+
+        return $acf_structure;
+    }
+
+    public function acf_write_enabled( ) {
+        $write_enabled = array_key_exists( 'HTTP_ACF_WRITE_ENABLED', $_SERVER ) && $_SERVER['HTTP_ACF_WRITE_ENABLED'] == "true";
+        return $write_enabled;
     }
 
     /**
@@ -428,12 +486,16 @@ class Rooftop_Acf_Exposer_Public {
             return;
         }
 
-        $posted_fields = @$_POST['advanced'][0]['fields'] ? @$_POST['advanced'][0]['fields'] : [];
-        $fields = $this->flattened_acf_fields( $posted_fields );
+        if( is_array( @$_POST['advanced'] ) ) {
+            foreach( $_POST['advanced'] as $fieldset ) {
+                $posted_fields = $fieldset['fields'];
+                $flattened_fields = $this->flattened_acf_fields( $posted_fields );
 
-        foreach( $fields as $index => $field ) {
-            foreach( $field as $key => $value ) {
-                update_field( $key, $value, $post_id );
+                foreach( $flattened_fields as $index => $field ) {
+                    foreach( $field as $key => $value ) {
+                        update_field( $key, $value, $post_id );
+                    }
+                }
             }
         }
     }

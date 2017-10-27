@@ -174,7 +174,10 @@ class Rooftop_Acf_Exposer {
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
         $this->loader->add_action( 'rest_api_init', $plugin_public, 'prepare_acf_hooks', 10 );
+
+        $this->loader->add_filter( 'rooftop_acf_write_enabled', $plugin_public, 'acf_write_enabled', 10, 0 );
         $this->loader->add_filter( 'rooftop_acf_data', $plugin_public, 'get_acf_data', 10, 1 );
+        $this->loader->add_filter( 'rooftop_acf_structure', $plugin_public, 'get_acf_structure', 10, 1 );
         $this->loader->add_filter( 'rooftop_acf_field_value', $plugin_public, 'get_acf_field_value', 10, 2 );
 
         $is_json_request = preg_match('/\/wp-json/', $_SERVER['REQUEST_URI']);
