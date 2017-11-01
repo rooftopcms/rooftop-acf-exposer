@@ -162,13 +162,15 @@ class Rooftop_Acf_Exposer_Public {
                     update_metadata( 'post', $post->ID, 'rooftop_acf_structure', $data, '');
                 }
             }
-            $response->data['content']['advanced_fields'] = empty( $structure ) ? [] : $structure;
+            $response->data['advanced_fields_schema'] = empty( $structure ) ? [] : $structure;
         }catch(Exception $e) {
             error_log("Failed to get ACF fields for post: " . $e->getMessage());
         }
 
         return $response;
     }
+
+
 
 
     /**
@@ -188,10 +190,16 @@ class Rooftop_Acf_Exposer_Public {
         $structure = [];
 
         foreach( $fields as $field ) {
-            if( array_key_exists( 'sub_fields', $field ) ) {
-                $structure[] = array('key' => $field['key'], 'fields' => $this->acf_field_structure( $field['sub_fields'] ) );
+            if( 'repeater' == $field['type'] ) {
+                $repeater_structure = array(
+                    'key' => $field['key'],
+                    'fields' => $this->acf_field_structure( $field['sub_fields'] )
+                );
+                $structure[] = apply_filters( 'rooftop/advanced_fields_structure/repeater', $repeater_structure, $field );
             }else {
-                $structure[] = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type']);
+                $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'required' => @$field['required'] );
+                $field_structure = apply_filters( 'rooftop/advanced_fields_structure/'.$field['type'], $field_structure, $field );
+                $structure[] = $field_structure;
             }
         }
 
@@ -265,7 +273,7 @@ class Rooftop_Acf_Exposer_Public {
             $acf_fields = $this->get_acf_fields_in_group($group);
 
             $post_has_group = array_filter($post_field_groups, function($field_group) use($group) {
-                return $field_group['field_group'] == $group['id'];
+                return @$field_group['field_group'] == $group['id'];
             });
 
             if ( !$post_has_group ) {
@@ -528,7 +536,7 @@ class Rooftop_Acf_Exposer_Public {
             }elseif( $this->is_a_repeater_with_values( $value ) ) {
                 $flattened_fields[] = $this->sub_fields( $value['fields'], $value['key'] );
             }else {
-                $flattened_fields[] = array($value['key'] => $value['value']); // single non-repeating field values. todo: check for a field_* key name and build an acfcloneindex object as the value
+                $flattened_fields[] = array($value['key'] => @$value['value']); // single non-repeating field values. todo: check for a field_* key name and build an acfcloneindex object as the value
             }
         }
 
@@ -575,3 +583,41 @@ class Rooftop_Acf_Exposer_Public {
         return $has_arrays && $has_fields && $all_rows_have_values;
     }
 }
+
+add_filter( 'rooftop/advanced_fields_structure/select', function( $structure, $field ) {
+    $structure['field_options'] = array(
+        'choices' => $field['choices'],
+        'default_value' => $field['default_value'],
+        'allow_null' => $field['allow_null'],
+        'multiple' => $field['multiple']
+    );
+    return $structure;
+}, 2, 2 );
+
+add_filter( 'rooftop/advanced_fields_structure/checkbox', function( $structure, $field ) {
+    $structure['field_options'] = array(
+        'choices' => $field['choices'],
+        'default_value' => $field['default_value']
+    );
+    return $structure;
+}, 2, 2 );
+
+add_filter( 'rooftop/advanced_fields_structure/repeater', function( $structure, $field ) {
+    $structure['repeater_options'] = array(
+        'row_min' => @$field['row_min'] || null,
+        'row_limit' => @$field['row_limit'] || null,
+    );
+
+    return $structure;
+}, 2, 2 );
+
+add_filter( 'rooftop/advanced_fields_structure/relationship', function( $structure, $field ) {
+    $structure['field_options'] = array(
+        'return_format' => $field['return_format'],
+        'post_type' => $field['post_type'],
+        'taxonomy' => $field['taxonomy'],
+        'max' => $field['max']
+    );
+
+    return $structure;
+}, 2, 2 );
