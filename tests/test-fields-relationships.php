@@ -9,7 +9,7 @@
 /**
  * Sample test case.
  */
-class TestFieldsReturned extends WP_UnitTestCase {
+class TestRelationships extends WP_UnitTestCase {
     static function setUpBeforeClass() {
         activate_plugin('advanced-custom-fields/acf.php');
 
@@ -24,22 +24,22 @@ class TestFieldsReturned extends WP_UnitTestCase {
                 'key' => 'field_1',
                 'label' => 'Sub field',
                 'name' => 'sub_field',
-                'type' => 'text',
-                'prefix' => '',
-                'required' => 0,
-                'conditional_logic' => 0,
-                'wrapper' => array(
-                    'width' => '',
-                    'css' => '',
-                    'id' => ''
+                'type' => 'relationship',
+                'return_format' => 'object',
+                'post_type' => array (
+                    0 => 'all',
                 ),
-                'default_value' => '',
-                'placeholder' => '',
-                'prepend' => '',
-                'append' => '',
-                'maxlength' => '',
-                'readonly' => 0,
-                'disabled' => 0
+                'taxonomy' => array (
+                    0 => 'all',
+                ),
+                'filters' => array (
+                    0 => 'search',
+                ),
+                'result_elements' => array (
+                    0 => 'post_type',
+                    1 => 'post_title',
+                ),
+                'max' => ''
             )),
             'location' => array (
                 array (
@@ -59,6 +59,9 @@ class TestFieldsReturned extends WP_UnitTestCase {
         ));
     }
 
+    /**
+     *
+     */
     public function setUp() {
         parent::setUp();
 
@@ -68,8 +71,8 @@ class TestFieldsReturned extends WP_UnitTestCase {
         $this->server = $wp_rest_server = new \WP_REST_Server;
         do_action( 'rest_api_init' );
 
-
-        $this->post = $this->factory->post->create_and_get( array( 'post_title' => 'the post', 'post_meta' => array( 'some_key' => 'the value') ) );
+        $this->post1 = $this->factory->post->create_and_get( array( 'post_title' => 'the post' ) );
+        $this->post2 = $this->factory->post->create_and_get( array( 'post_title' => 'first page' ) );
 
         global $acf;
         require_once $acf->settings['path'].'/acf.php';
@@ -82,37 +85,11 @@ class TestFieldsReturned extends WP_UnitTestCase {
 	function test_acf_field_added() {
         $data = $this->add_acf_field_to_post();
 
-        $this->assertTrue( isset( $data['content']['advanced'][0] ) );
-        $this->assertEquals( count( $data['content']['advanced'][0]['fields'] ), 1 );
-    }
+        $fields = $data['content']['advanced'][0]['fields'];
 
-    function test_acf_field_updated() {
-        $data = $this->add_acf_field_to_post();
-
-        $updated_field_text_value = "the updated value";
-        $fields = array(
-            'advanced' => array(
-                0 => array(
-                    'fields' => array(
-                        0 => array(
-                            'key' => 'field_1',
-                            'value' => $updated_field_text_value
-                        )
-                    )
-                )
-            )
-        );
-
-        $_POST['advanced'] = $fields['advanced'];
-        $request = new WP_REST_Request('POST', '/wp/v2/posts/'.$this->post->ID);
-        $response = $this->server->dispatch( $request );
-        $updated_data = $response->data;
-
-        $updated_fields = $updated_data['content']['advanced'][0]['fields'];
-
-        $this->assertNotEquals( $data['content']['advanced'][0]['fields'][0]['value'], $updated_fields[0]['value'] ); // field was changed
-        $this->assertEquals( 1, count( $updated_fields ) ); // we still have 1 field
-        $this->assertEquals( $updated_field_text_value, $updated_fields[0]['value'] ); // it was updated to the proper value
+        $this->assertEquals( count( $fields ), 1 ); // test we've added the field
+        $this->assertTrue( is_array( $fields[0]['value'] ) ) ; // we're returning an object (as defined in our register_field_group call)
+        $this->assertEquals( $fields[0]['value'][0]['ID'], $this->post2->ID ); // we've set the related post value
     }
 
     /**
@@ -127,7 +104,7 @@ class TestFieldsReturned extends WP_UnitTestCase {
                     'fields' => array(
                         $key => array(
                             'key' => 'field_1',
-                            'value' => "field value"
+                            'value' => (string)$this->post2->ID
                         )
                     )
                 )
@@ -135,7 +112,7 @@ class TestFieldsReturned extends WP_UnitTestCase {
         );
 
         $_POST['advanced'] = $fields['advanced'];
-        $request = new WP_REST_Request('POST', '/wp/v2/posts/'.$this->post->ID);
+        $request = new WP_REST_Request('POST', '/wp/v2/posts/'.$this->post1->ID );
         $response = $this->server->dispatch( $request );
 
         return $response->data;
