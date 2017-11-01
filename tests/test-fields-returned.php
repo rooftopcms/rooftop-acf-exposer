@@ -9,7 +9,7 @@
 /**
  * Sample test case.
  */
-class SampleTest extends WP_UnitTestCase {
+class TestFieldsReturned extends WP_UnitTestCase {
     static function setUpBeforeClass() {
         activate_plugin('advanced-custom-fields/acf.php');
 
