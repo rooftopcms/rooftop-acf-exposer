@@ -186,6 +186,12 @@ class Rooftop_Acf_Exposer_Public {
         return $data;
     }
 
+    /**
+     * @param $fields
+     * @return array
+     *
+     * given a set of fields, build up the ACF fields structure of rows, repeaters and fields
+     */
     private function acf_field_structure( $fields ) {
         $structure = [];
 
@@ -197,7 +203,7 @@ class Rooftop_Acf_Exposer_Public {
                 );
                 $structure[] = apply_filters( 'rooftop/advanced_fields_structure/repeater', $repeater_structure, $field );
             }else {
-                $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'required' => @$field['required'] );
+                $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'required' => ( @$field['required'] ? true : false ) );
                 $field_structure = apply_filters( 'rooftop/advanced_fields_structure/'.$field['type'], $field_structure, $field );
                 $structure[] = $field_structure;
             }
@@ -206,6 +212,13 @@ class Rooftop_Acf_Exposer_Public {
         return $structure;
     }
 
+    /**
+     * @param $post_type
+     * @return array
+     *
+     * given a post type, get the ACF field groups that can be applied to the post type and build up a valid structure.
+     * this is for new posts that dont have ACF data, so we can use this as a mapping for some sort of client-side form builder
+     */
     public function get_acf_structure( $post_type ) {
         $acfs = array_filter( apply_filters('acf/get_field_groups', array() ) );
 
@@ -235,6 +248,11 @@ class Rooftop_Acf_Exposer_Public {
         return $acf_structure;
     }
 
+    /**
+     * @return bool
+     *
+     * filter to work out whether we have an acf-write-enabled header
+     */
     public function acf_write_enabled( ) {
         $write_enabled = array_key_exists( 'HTTP_ACF_WRITE_ENABLED', $_SERVER ) && $_SERVER['HTTP_ACF_WRITE_ENABLED'] == "true";
         return $write_enabled;
@@ -484,6 +502,11 @@ class Rooftop_Acf_Exposer_Public {
         return $field_value;
     }
 
+    /**
+     * @param $post_id
+     *
+     * store the advanced fields in the POST body against the given $post_id
+     */
     function store_acf_fields( $post_id ) {
         $post = get_post( $post_id );
 
@@ -494,7 +517,7 @@ class Rooftop_Acf_Exposer_Public {
             return;
         }
 
-        if( is_array( @$_POST['conent']['advanced'] ) ) {
+        if( is_array( @$_POST['content']['advanced'] ) ) {
             foreach( $_POST['content']['advanced'] as $fieldset ) {
                 $posted_fields = $fieldset['fields'];
                 $flattened_fields = $this->flattened_acf_fields( $posted_fields );
@@ -508,6 +531,13 @@ class Rooftop_Acf_Exposer_Public {
         }
     }
 
+    /**
+     * @param $fields
+     * @param $key
+     * @return array
+     *
+     * recursive method for collecting the key/value/fields of a given fieldset
+     */
     function sub_fields( $fields, $key ) {
         $nested_fields = [];
 
@@ -527,6 +557,12 @@ class Rooftop_Acf_Exposer_Public {
         return $nested_fields;
     }
 
+    /**
+     * @param $fields
+     * @return array
+     *
+     * collect the fields and values depending on whether we have a key:value, key:repeater, or key:repeater:[key:repeater...] structure
+     */
     function flattened_acf_fields( $fields ) {
         $flattened_fields = [];
 
@@ -543,6 +579,12 @@ class Rooftop_Acf_Exposer_Public {
         return $flattened_fields;
     }
 
+    /**
+     * @param $value
+     * @return bool
+     *
+     * work out whther we have a repeater with other repeaters nested
+     */
     function is_a_repeater_with_nested_repeaters( $value ) {
         $nested_value = @$value['fields'];
 
@@ -563,6 +605,12 @@ class Rooftop_Acf_Exposer_Public {
         return count( $fields_with_sub_fields ) ? true : false;
     }
 
+    /**
+     * @param $value
+     * @return bool
+     *
+     * work out if this is a repeater with a set of values
+     */
     function is_a_repeater_with_values( $value ) {
         $types = array_unique( array_map( function( $i) {return gettype( $i ); }, array_values( $value ) ) );
         $has_arrays = count( preg_grep( '/array/', $types ) ) > 0;
@@ -583,6 +631,10 @@ class Rooftop_Acf_Exposer_Public {
         return $has_arrays && $has_fields && $all_rows_have_values;
     }
 }
+
+/**
+ * filters for building out our ACF schema attributes.
+ */
 
 add_filter( 'rooftop/advanced_fields_structure/select', function( $structure, $field ) {
     $structure['field_options'] = array(
@@ -616,7 +668,7 @@ add_filter( 'rooftop/advanced_fields_structure/relationship', function( $structu
         'return_format' => $field['return_format'],
         'post_type' => $field['post_type'],
         'taxonomy' => $field['taxonomy'],
-        'max' => $field['max']
+        'max' => @$field['max'] || null
     );
 
     return $structure;
