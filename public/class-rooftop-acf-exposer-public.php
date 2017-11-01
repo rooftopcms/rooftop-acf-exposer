@@ -197,7 +197,7 @@ class Rooftop_Acf_Exposer_Public {
                 );
                 $structure[] = apply_filters( 'rooftop/advanced_fields_structure/repeater', $repeater_structure, $field );
             }else {
-                $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'required' => @$field['required'] );
+                $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'required' => ( @$field['required'] ? true : false ) );
                 $field_structure = apply_filters( 'rooftop/advanced_fields_structure/'.$field['type'], $field_structure, $field );
                 $structure[] = $field_structure;
             }
@@ -494,7 +494,7 @@ class Rooftop_Acf_Exposer_Public {
             return;
         }
 
-        if( is_array( @$_POST['conent']['advanced'] ) ) {
+        if( is_array( @$_POST['content']['advanced'] ) ) {
             foreach( $_POST['content']['advanced'] as $fieldset ) {
                 $posted_fields = $fieldset['fields'];
                 $flattened_fields = $this->flattened_acf_fields( $posted_fields );
@@ -616,7 +616,7 @@ add_filter( 'rooftop/advanced_fields_structure/relationship', function( $structu
         'return_format' => $field['return_format'],
         'post_type' => $field['post_type'],
         'taxonomy' => $field['taxonomy'],
-        'max' => $field['max']
+        'max' => @$field['max'] || null
     );
 
     return $structure;
