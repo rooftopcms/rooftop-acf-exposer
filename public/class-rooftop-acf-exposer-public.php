@@ -494,8 +494,8 @@ class Rooftop_Acf_Exposer_Public {
             return;
         }
 
-        if( is_array( @$_POST['advanced'] ) ) {
-            foreach( $_POST['advanced'] as $fieldset ) {
+        if( is_array( @$_POST['conent']['advanced'] ) ) {
+            foreach( $_POST['content']['advanced'] as $fieldset ) {
                 $posted_fields = $fieldset['fields'];
                 $flattened_fields = $this->flattened_acf_fields( $posted_fields );
 
