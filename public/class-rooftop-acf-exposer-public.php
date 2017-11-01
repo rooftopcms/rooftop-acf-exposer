@@ -157,9 +157,10 @@ class Rooftop_Acf_Exposer_Public {
             $structure = get_post_meta( $post->ID, 'rooftop_acf_structure', true );
             if( empty( $structure ) ) {
                 $structure = apply_filters( 'rooftop_acf_structure', $post->post_type, array() );
+                $structure = $structure[0];
 
                 if( !empty( $structure ) ) {
-                    update_metadata( 'post', $post->ID, 'rooftop_acf_structure', $data, '');
+                    update_metadata( 'post', $post->ID, 'rooftop_acf_structure', $structure, '');
                 }
             }
             $response->data['advanced_fields_schema'] = empty( $structure ) ? [] : $structure;
