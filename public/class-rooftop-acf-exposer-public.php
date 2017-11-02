@@ -200,6 +200,7 @@ class Rooftop_Acf_Exposer_Public {
             if( 'repeater' == $field['type'] ) {
                 $repeater_structure = array(
                     'key' => $field['key'],
+                    'type' => $field['type'],
                     'fields' => $this->acf_field_structure( $field['sub_fields'] )
                 );
                 $structure[] = apply_filters( 'rooftop/advanced_fields_structure/repeater', $repeater_structure, $field );
@@ -670,6 +671,15 @@ add_filter( 'rooftop/advanced_fields_structure/relationship', function( $structu
         'post_type' => $field['post_type'],
         'taxonomy' => $field['taxonomy'],
         'max' => @$field['max'] || null
+    );
+
+    return $structure;
+}, 2, 2 );
+
+add_filter( 'rooftop/advanced_fields_structure/taxonomy', function( $structure, $field ) {
+    $structure['field_options'] = array(
+        'field_type' => $field['field_type'],
+        'taxonomy' => $field['taxonomy']
     );
 
     return $structure;
