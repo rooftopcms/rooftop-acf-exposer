@@ -113,7 +113,7 @@ class Rooftop_Acf_Exposer_Public {
 
         $terms = get_terms( );
         foreach( $terms as $term ) {
-            register_rest_field($term->taxonomy,
+            register_rest_field($term->taxonomy, 
                 'advanced',
                 array(
                     'get_callback' => array($this, 'add_fields_to_taxonomy'),
@@ -153,26 +153,12 @@ class Rooftop_Acf_Exposer_Public {
             }
 
             $response->data['content']['advanced'] = empty( $data ) ? [] : $data;
-
-            $structure = get_post_meta( $post->ID, 'rooftop_acf_structure', true );
-            if( empty( $structure ) ) {
-                $structure = apply_filters( 'rooftop_acf_structure', $post->post_type, array() );
-                $structure = $structure[0];
-
-                if( !empty( $structure ) ) {
-                    update_metadata( 'post', $post->ID, 'rooftop_acf_structure', $structure, '');
-                }
-            }
-            $response->data['advanced_fields_schema'] = empty( $structure ) ? [] : $structure;
         }catch(Exception $e) {
             error_log("Failed to get ACF fields for post: " . $e->getMessage());
         }
 
         return $response;
     }
-
-
-
 
     /**
      * @param $post
@@ -215,6 +201,25 @@ class Rooftop_Acf_Exposer_Public {
     }
 
     /**
+     * @param $server
+     *
+     * callback that is registered on a rest_api_init (if serving an OPTIONS request).
+     * fetch the ACF fieldsets and include their schema in the 'advanced_fields_schema' attribute
+     */
+    function add_rooftop_acf_schema( $server ) {
+        $types = get_post_types(array('public' => true));
+
+        foreach( $types as $key => $type ) {
+            $schema = $this->get_acf_structure( $type );
+            register_rest_field( $type, 'advanced_fields_schema', array(
+                'get_callback' => null,
+                'update_callback' => null,
+                'schema' => $schema[0]
+            ));
+        }
+    }
+
+    /**
      * @param $post_type
      * @return array
      *
@@ -237,14 +242,14 @@ class Rooftop_Acf_Exposer_Public {
         if( is_array($acfs) ) {
             $fieldsets = array_map( function( $a ) use ( $metabox_ids ) {
                 $fields = apply_filters('acf/field_group/get_fields', array(), $a['id'] );
-                $structured_fields = $this->acf_field_structure( $fields );
 
                 if( in_array( $a['id'], $metabox_ids ) ) {
+                    $structured_fields = $this->acf_field_structure( $fields );
                     return array('id' => $a['id'], 'title' => $a['title'], 'fields' => $structured_fields );
                 }
             }, $acfs );
 
-            $acf_structure[] = array_filter( $fieldsets );
+            $acf_structure[] = array_values( array_filter( $fieldsets ) );
         }
 
         return $acf_structure;
