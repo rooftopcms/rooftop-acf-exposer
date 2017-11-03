@@ -192,6 +192,11 @@ class Rooftop_Acf_Exposer_Public {
                 $structure[] = apply_filters( 'rooftop/advanced_fields_structure/repeater', $repeater_structure, $field );
             }else {
                 $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'required' => ( @$field['required'] ? true : false ) );
+
+                if( @$field['conditional_logic']['status'] ) {
+                    $field_structure['conditional_logic'] = @$field['conditional_logic'];
+                }
+
                 $field_structure = apply_filters( 'rooftop/advanced_fields_structure/'.$field['type'], $field_structure, $field );
                 $structure[] = $field_structure;
             }
