@@ -186,6 +186,7 @@ class Rooftop_Acf_Exposer_Public {
             if( 'repeater' == $field['type'] ) {
                 $repeater_structure = array(
                     'key' => $field['key'],
+                    'name' => $field['name'],
                     'type' => $field['type'],
                     'fields' => $this->acf_field_structure( $field['sub_fields'] )
                 );
