@@ -188,11 +188,12 @@ class Rooftop_Acf_Exposer_Public {
                     'key' => $field['key'],
                     'name' => $field['name'],
                     'type' => $field['type'],
+                    'label' => $field['label'],
                     'fields' => $this->acf_field_structure( $field['sub_fields'] )
                 );
                 $structure[] = apply_filters( 'rooftop/advanced_fields_structure/repeater', $repeater_structure, $field );
             }else {
-                $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'required' => ( @$field['required'] ? true : false ) );
+                $field_structure = array('key' => $field['key'], 'name' => $field['name'], 'type' => $field['type'], 'label' => $field['label'], 'required' => ( @$field['required'] ? true : false ) );
 
                 if( @$field['conditional_logic']['status'] ) {
                     $field_structure['conditional_logic'] = @$field['conditional_logic'];
