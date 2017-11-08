@@ -464,7 +464,7 @@ class Rooftop_Acf_Exposer_Public {
             return $new_field;
         };
 
-        if(is_array($value) && is_object(array_values($value)[0])){
+        if(is_array($value) && is_object(@(array_values($value)[0]))){
             return array_map($post_response, $value);
         }elseif(is_object($value)){
             return $post_response($value);
@@ -563,7 +563,7 @@ class Rooftop_Acf_Exposer_Public {
 
                     $nested_fields[$key][$field_index] = $nested_sub_field;
                 }else {
-                    $nested_fields[$key][$field_index][$sub_field['key']] = $sub_field['value'];
+                    $nested_fields[$key][$field_index][$sub_field['key']] = @$sub_field['value'];
                 }
             }
         }
@@ -639,7 +639,7 @@ class Rooftop_Acf_Exposer_Public {
             $values = array_values( $field );
             $field_values = array_map( function( $i ) {return @$i['value']; }, $values );
 
-            $all_rows_have_values = count( $field ) == count( array_filter( $field_values ) );
+            $all_rows_have_values = count( $field ) == count( array_keys( $field_values ) );
         }
 
         return $has_arrays && $has_fields && $all_rows_have_values;
