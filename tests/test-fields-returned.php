@@ -57,6 +57,11 @@ class TestFieldsReturned extends WP_UnitTestCase {
             'instruction_placement' => 'label',
             'hide_on_screen' => ''
         ));
+
+        // manually add our callback actions (these aren't automatically called in a test environment)
+        $plugin = new Rooftop_Acf_Exposer_Public( "rooftop-acf-exposer", 1 );
+        add_action( 'rest_api_init', array( $plugin, 'add_rooftop_acf_schema' ), 1 );
+        add_filter( 'save_post', array( $plugin, 'store_acf_fields' ), 1, 1 );
     }
 
     public function setUp() {
@@ -66,28 +71,36 @@ class TestFieldsReturned extends WP_UnitTestCase {
 
         global $wp_rest_server;
         $this->server = $wp_rest_server = new \WP_REST_Server;
-        do_action( 'rest_api_init' );
+        do_action( 'rest_api_init' ); // initialize our $server
 
-
+        // add a default post
         $this->post = $this->factory->post->create_and_get( array( 'post_title' => 'the post', 'post_meta' => array( 'some_key' => 'the value') ) );
 
         global $acf;
         require_once $acf->settings['path'].'/acf.php';
+    }
 
-        // register our save_post hook
-        $this->plugin = new Rooftop_Acf_Exposer_Public( "rooftop-acf-exposer", 1 );
-        add_filter( 'save_post', array( $this->plugin, 'store_acf_fields'), 1, 1 );
+    function test_schema_added() {
+        $request = new WP_REST_Request('OPTIONS', '/wp/v2/posts' );
+        $response = $this->server->dispatch( $request );
+
+        $schema = $response->data['schema']['properties']['advanced_fields_schema'];
+
+        $this->assertEquals( 1, count( array_keys( $schema ) ) ); // advanced fields fieldgroup was added
+        $this->assertTrue( array_key_exists( 'fields', $schema[0] ) ); // fieldset exists
+        $this->assertTrue( array_key_exists( 'name', $schema[0]['fields'][0] ) ); // sub-fields exists
+        $this->assertEquals( 'sub_field', $schema[0]['fields'][0]['name'] ); // sub-field 1 has a name attribute
     }
 
 	function test_acf_field_added() {
-        $data = $this->add_acf_field_to_post();
+        $data = $this->add_acf_field_to_post( );
 
-        $this->assertTrue( isset( $data['content']['advanced'][0] ) );
-        $this->assertEquals( count( $data['content']['advanced'][0]['fields'] ), 1 );
+        $this->assertTrue( isset( $data['content']['advanced'][0] ) ); // advanced fields exists in the post
+        $this->assertEquals( count( $data['content']['advanced'][0]['fields'] ), 1 ); // we have added 1 field
     }
 
     function test_acf_field_updated() {
-        $data = $this->add_acf_field_to_post();
+        $data = $this->add_acf_field_to_post( );
 
         $updated_field_text_value = "the updated value";
         $fields = array(
@@ -103,7 +116,7 @@ class TestFieldsReturned extends WP_UnitTestCase {
             )
         );
 
-        $_POST['advanced'] = $fields['advanced'];
+        $_POST['content'] = $fields;
         $request = new WP_REST_Request('POST', '/wp/v2/posts/'.$this->post->ID);
         $response = $this->server->dispatch( $request );
         $updated_data = $response->data;
@@ -115,17 +128,27 @@ class TestFieldsReturned extends WP_UnitTestCase {
         $this->assertEquals( $updated_field_text_value, $updated_fields[0]['value'] ); // it was updated to the proper value
     }
 
+    function test_acf_not_written_unless_header_set() {
+        $data = $this->add_acf_field_to_post( array( 'HTTP_ACF_WRITE_ENABLED' => false ) );
+        $this->assertFalse( isset( $data['content']['advanced'][0] ) ); // advanced fields weren't added
+    }
+
     /**
-     * Use the API to add a value to an existing ACF field associated with Posts
-     *
-     * @return array
+     * @param array $headers - the $_SERVER headers to include in the request. defaults to headers that allow writing to ACF
+     * @return mixed - data attribute from request response
      */
-    private function add_acf_field_to_post( $key = 1508952972 ) {
+    private function add_acf_field_to_post( $headers = array( 'HTTP_ACF_WRITE_ENABLED' => true ) ) {
+        // we have to manually set _POST and _SERVER data...
+
+        foreach( $headers as $header => $value ) {
+            $_SERVER[$header] = $value;
+        }
+
         $fields = array(
             'advanced' => array(
                 0 => array(
                     'fields' => array(
-                        $key => array(
+                        0 => array(
                             'key' => 'field_1',
                             'value' => "field value"
                         )
@@ -134,8 +157,9 @@ class TestFieldsReturned extends WP_UnitTestCase {
             )
         );
 
-        $_POST['advanced'] = $fields['advanced'];
+        $_POST['content'] = $fields;
         $request = new WP_REST_Request('POST', '/wp/v2/posts/'.$this->post->ID);
+        $request->set_header( 'acf-write-enabled', true );
         $response = $this->server->dispatch( $request );
 
         return $response->data;
