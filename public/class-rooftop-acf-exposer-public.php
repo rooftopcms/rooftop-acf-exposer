@@ -524,10 +524,10 @@ class Rooftop_Acf_Exposer_Public {
     function store_acf_fields( $post_id ) {
         $post = get_post( $post_id );
 
-        $dont_write_acf = apply_filters( 'rooftop_acf_write_enabled', false ) == false;
+        $acf_write_enabled = apply_filters( 'rooftop_acf_write_enabled', false );
 
         // if we dont have a post, or it's being auto saved or trashed, skip storing anything at this point
-        if( ! $post || @$_POST['data']['wp_autosave'] || in_array( $post->post_status, array( 'auto-draft', 'trash' ) ) || $dont_write_acf ) {
+        if( ! $post || @$_POST['data']['wp_autosave'] || in_array( $post->post_status, array( 'auto-draft', 'trash' ) ) || !$acf_write_enabled ) {
             return;
         }
 
