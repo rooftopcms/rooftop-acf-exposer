@@ -696,3 +696,13 @@ add_filter( 'rooftop/advanced_fields_structure/taxonomy', function( $structure, 
 
     return $structure;
 }, 2, 2 );
+
+add_filter( 'rooftop/advanced_fields_structure/date_picker', function( $structure, $field ) {
+    $structure['field_options'] = array(
+        'date_format' => $field['date_format'],
+        'display_format' => $field['display_format'],
+        'first_day' => $field['first_day']
+    );
+
+    return $structure;
+}, 2, 2 );
