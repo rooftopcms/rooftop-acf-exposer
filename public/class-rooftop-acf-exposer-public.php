@@ -273,6 +273,16 @@ class Rooftop_Acf_Exposer_Public {
     }
 
     /**
+     *  @param	$return (boolean) defaults to true
+     *  @param	$last_revision (object) the last revision that WP will compare against
+     *  @param	$post (object) the $post that WP will compare against
+     *  @return	$return (boolean)
+     */
+    public function check_acf_fields_updated( $return, $last_revision, $post ) {
+        return false;
+    }
+
+    /**
      * @param $post
      * @return array
      *
@@ -493,10 +503,14 @@ class Rooftop_Acf_Exposer_Public {
                 'parent'=>$t->parent);
         };
 
-        if(is_array($value) && is_object(array_values($value)[0])){
-            return array_map($taxonomy_response, $value);
-        }elseif(is_object($value)){
-            return $taxonomy_response($value);
+        if( is_array( $value ) ) {
+            $array_values = array_values( $value );
+        }
+
+        if( is_array( $value ) && is_object( reset( $array_values ) ) ) {
+            return array_map( $taxonomy_response, $value );
+        }elseif( is_object( $value ) ){
+            return $taxonomy_response( $value );
         }else {
             return $value;
         }
@@ -532,16 +546,28 @@ class Rooftop_Acf_Exposer_Public {
         }
 
         if( is_array( @$_POST['content']['advanced'] ) ) {
+            $all_fields = [];
+
             foreach( $_POST['content']['advanced'] as $fieldset ) {
                 $posted_fields = $fieldset['fields'];
                 $flattened_fields = $this->flattened_acf_fields( $posted_fields );
 
                 foreach( $flattened_fields as $index => $field ) {
-                    foreach( $field as $key => $value ) {
-                        update_field( $key, $value, $post_id );
+                    foreach( $field as $field_id => $value ) {
+                        $all_fields[$field_id] = $value;
                     }
                 }
             }
+
+            // move our collection of fields to the POST var, and hand over the work of updating to ACF actions
+            $_POST['fields'] = $all_fields;
+            do_action('acf/save_post', $post_id);
+
+//            // iterate over the flattened array of field_id:values, get the field object and call the acf/update_value action
+//            foreach( $all_fields as $field_id => $value ) {
+//                $field = apply_filters('acf/load_field', false, $field_id );
+//                do_action('acf/update_value', $value, $post_id, $field );
+//            }
         }
     }
 

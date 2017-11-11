@@ -181,6 +181,8 @@ class Rooftop_Acf_Exposer {
 
         $is_json_request = preg_match('/\/wp-json/', $_SERVER['REQUEST_URI']);
         if( $is_json_request ) {
+            // this will create a revision when saving posts via the API
+            //$this->loader->add_filter( 'wp_save_post_revision_check_for_changes', $plugin_public, 'check_acf_fields_updated', 10, 3 );
             $this->loader->add_filter( 'save_post', $plugin_public, 'store_acf_fields', 1, 1 );
         }
 
