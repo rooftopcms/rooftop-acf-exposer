@@ -218,10 +218,12 @@ class Rooftop_Acf_Exposer_Public {
 
         foreach( $types as $key => $type ) {
             $schema = $this->get_acf_structure( $type );
+            $schema = count( array_values( $schema[0] ) ) ? $schema[0] : [null];
+
             register_rest_field( $type, 'advanced_fields_schema', array(
                 'get_callback' => null,
                 'update_callback' => null,
-                'schema' => $schema[0]
+                'schema' => $schema
             ));
         }
     }
