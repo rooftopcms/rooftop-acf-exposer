@@ -217,8 +217,15 @@ class Rooftop_Acf_Exposer_Public {
         $types = get_post_types(array('public' => true));
 
         foreach( $types as $key => $type ) {
-            $schema = $this->get_acf_structure( $type );
-            $schema = count( array_values( $schema[0] ) ) ? $schema[0] : [null];
+            $request_parts = preg_split("/\//", $_SERVER['REQUEST_URI']);
+            $resource_id = null;
+
+            if( count( $request_parts ) == 6 ) {
+                $resource_id = $request_parts[5];
+            }
+
+            $schema = $this->get_acf_structure( $type, $resource_id );
+            $schema = count( array_values( $schema[0] ) ) ? reset($schema) : [];
 
             register_rest_field( $type, 'advanced_fields_schema', array(
                 'get_callback' => null,
@@ -230,23 +237,74 @@ class Rooftop_Acf_Exposer_Public {
 
     /**
      * @param $post_type
+     * @param $post_id
      * @return array
      *
      * given a post type, get the ACF field groups that can be applied to the post type and build up a valid structure.
      * this is for new posts that dont have ACF data, so we can use this as a mapping for some sort of client-side form builder
+     *
+     * if we have a post_id, we can derive the schema more easily by passing the type and id into the ACF match_field_groups filter,
+     * otherwise, we have to iterate over the groups (which are OR's) and collect the metabox ID's that way...
      */
-    public function get_acf_structure( $post_type ) {
+    public function get_acf_structure( $post_type, $post_id = null ) {
         $acfs = array_filter( apply_filters('acf/get_field_groups', array() ) );
 
-        $acf_structure = [];
+        if( $post_type && $post_id ) {
+            // build up an array of ACF metabox_ids and only include our fieldset if
+            // the current post is a valid type for the given post_type
+            $filter = array(
+                'post_type'	=> $post_type,
+                'post_id'   => $post_id
+            );
 
-        // build up an array of ACF metabox_ids and only include our fieldset if
-        // the current post is a valid type for the given post_type
-        $filter = array(
-            'post_type'	=> $post_type
-        );
-        $metabox_ids = array();
-        $metabox_ids = apply_filters( 'acf/location/match_field_groups', $metabox_ids, $filter );
+            $metabox_ids = array();
+            $metabox_ids = apply_filters( 'acf/location/match_field_groups', $metabox_ids, $filter );
+        }else {
+            if( $post_type == "page" ) {
+                $f = 1;
+            }
+
+            $all_filters = array_map( function( $fieldset ) use( $acfs, $post_type ) {
+                $location_logic_groups = apply_filters('acf/field_group/get_location', array(), $fieldset['id']);
+                $conditions = [];
+
+                $has_post_type_param = array_filter( $location_logic_groups, function( $logic_group ) use ( $post_type ) {
+                    return array_filter( $logic_group, function( $row ) use ($post_type ) {
+                        return $row['param'] == 'post_type' && $row['value'] == $post_type;
+                    } );
+                } );
+
+                if( count( $has_post_type_param ) ) {
+                    foreach( $location_logic_groups as $location_logic_group ) {
+                        $group_conditions = [];
+
+                        foreach ($location_logic_group as $condition) {
+                            $group_conditions[$condition['param']] = $condition['value'];
+                        }
+
+                        if( count( array_values( $group_conditions ) ) ) {
+                            $conditions[] = $group_conditions;
+                        }
+                    }
+                }
+
+                return $conditions ;
+            }, $acfs );
+
+            $all_filters = array_values( array_filter( $all_filters ) );
+
+            $metabox_ids = array();
+
+            foreach( $all_filters as $filter_group ) {
+                foreach( $filter_group as $filter_row ) {
+                    $row_metabox_ids = apply_filters( 'acf/location/match_field_groups', array(), $filter_row );
+                    $metabox_ids = array_merge( $metabox_ids, $row_metabox_ids );
+                    $f = 1;
+                }
+            }
+        }
+
+        $acf_structure = [];
 
         if( is_array($acfs) ) {
             $fieldsets = array_map( function( $a ) use ( $metabox_ids ) {
