@@ -37,7 +37,10 @@ The licence for ACF is not open source, but there is a freely-downloadable versi
 
 == Changelog ==
 
-= 1.2.2 =
+= 1.2.3 =
+* Updated how we derive the content type schema structure
+
+= 1.2.2-beta1 =
 * Support for writing back to ACF fields through the API
 
 = 1.2.1 =
