@@ -16,7 +16,7 @@
  * Plugin Name:       Rooftop ACF Exposer
  * Plugin URI:        http://github.com/rooftopcms/rooftop-acf-exposer
  * Description:       rooftop-acf-exposer includes fields from the excellent Advanced Custom Fields plugin into the API.
- * Version:           1.2.3
+ * Version:           1.2.3.1
  * Author:            RooftopCMS
  * Author URI:        https://www.rooftopcms.com
  * License:           GPL-3.0+

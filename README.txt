@@ -37,6 +37,9 @@ The licence for ACF is not open source, but there is a freely-downloadable versi
 
 == Changelog ==
 
+= 1.2.3.1 =
+* Fix fields response when a post doesn't have a value for a certain field
+
 = 1.2.3 =
 * Updated how we derive the content type schema structure
 
