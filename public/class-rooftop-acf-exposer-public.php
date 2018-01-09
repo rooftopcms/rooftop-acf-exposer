@@ -386,11 +386,19 @@ class Rooftop_Acf_Exposer_Public {
             $response_group['fields'] = array_map(function($acf_field) use($field_value, $depth) {
                 $acf_field = apply_filters('acf/load_field', $acf_field, $acf_field['key']);
 
-                if(array_key_exists($acf_field['name'], $field_value)) {
+                if( array_key_exists( $acf_field['name'], $field_value ) ) {
                     $response_value = $this->process_field($acf_field, $field_value, $depth);
                 }else {
-                    // we still include the field in the response so we can test `if !somefield.empty?` rather than `if response.responds_to?(:somefield) && !somefield.empty?`
-                    $response_value = array('name' => $acf_field['name'], 'label' => $acf_field['label'], 'value' => "");
+                    // this post doesn't have a value for this field. rather than just omit it from the response,
+                    // we still include the field in the response so we can test `if !somefield.empty?` rather than
+                    // `if response.responds_to?(:somefield) && !somefield.empty?`
+                    $response_value = array(
+                        'key'   => $acf_field['key'],
+                        'name'  => $acf_field['name'],
+                        'label' => $acf_field['label'],
+                        'class' => $acf_field['class'],
+                        'value' => ""
+                    );
                 }
 
                 return $response_value;
