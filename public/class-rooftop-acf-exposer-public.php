@@ -22,7 +22,7 @@
  */
 class Rooftop_Acf_Exposer_Public {
 
-    private static $MAX_DEPTH = 3;
+    private static $MAX_DEPTH = 2;
 
     /**
      * The ID of this plugin.
@@ -344,11 +344,13 @@ class Rooftop_Acf_Exposer_Public {
 
     /**
      * @param $post
+     * @param $depth
      * @return array
      *
      * returns the ACF fields associated with a given post
      * called by the 'add_acf_fields_to_content' callback
      *
+     * will nest ACF fields down to a maximum recursion depth
      */
 
     private function acf_fields_for_post_at_depth($post, $depth) {
