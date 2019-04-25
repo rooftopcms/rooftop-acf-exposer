@@ -22,7 +22,7 @@
  */
 class Rooftop_Acf_Exposer_Public {
 
-    private static $MAX_DEPTH = 3;
+    private static $MAX_DEPTH = 2;
 
     /**
      * The ID of this plugin.
@@ -344,11 +344,13 @@ class Rooftop_Acf_Exposer_Public {
 
     /**
      * @param $post
+     * @param $depth
      * @return array
      *
      * returns the ACF fields associated with a given post
      * called by the 'add_acf_fields_to_content' callback
      *
+     * will nest ACF fields down to a maximum recursion depth
      */
 
     private function acf_fields_for_post_at_depth($post, $depth) {
@@ -535,7 +537,9 @@ class Rooftop_Acf_Exposer_Public {
              * the ACF structure should refer to data from A to B, and B to A as well as B to C.
              * If MAX_DEPTH is set to 3, all three levels, A -> B -> C, should have ACF data.
              */
-            if( $depth <= Rooftop_Acf_Exposer_Public::$MAX_DEPTH ) {
+            $excluded_deeply_nested_relations = explode(',', $_ENV['EXCLUDED_DEEP_NESTED_RELATIONS'] );
+            $continue = $depth <= Rooftop_Acf_Exposer_Public::$MAX_DEPTH && !in_array( $field['name'], $excluded_deeply_nested_relations );
+            if( $continue ) {
                 $new_field['advanced'] = $this->get_acf_data($p, $depth);
             }
 

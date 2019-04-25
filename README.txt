@@ -37,6 +37,9 @@ The licence for ACF is not open source, but there is a freely-downloadable versi
 
 == Changelog ==
 
+= 1.2.3.2 =
+* Added an ENV-based blacklist to exclude some ACF relations from being deeply nested
+
 = 1.2.3.1 =
 * Fix fields response when a post doesn't have a value for a certain field
 
